@@ -310,26 +310,19 @@ fn test_return_stack() {
     let test_pushr = vm.colon_def("test_pushr", &[">r", "bye"]);
     let test_popr = vm.colon_def("test_popr", &[">r", "r>", "bye"]);
 
-    // TODO:
-    // let test_rdrop = dict.add_col_word_ex(&mut vm, "test_rdrop", &["rdrop", "bye"]);
-    // test_rsp_load
-    // test_rsp_store
-
     vm.push_i32(42);
+
+    assert_eq!(0, vm.rstack_depth());
 
     vm.run_word(test_pushr as usize);
     let rtop = vm.read_i32(mmap::RSP as i32);
     let value = vm.read_i32(rtop as i32 + 4);
     assert_eq!(value, 42, ">r");
 
-    // TODO: assert stacks are valid
-
     vm.push_i32(69);
     vm.run_word(test_popr as usize);
     let value = vm.pop_i32();
     assert_eq!(value, 69, "r>");
-
-    // TODO: assert stacks are valid
 }
 
 #[test]
@@ -604,8 +597,6 @@ fn test_find() {
     let expected = vm.find("[").unwrap();
     assert_eq!(value, expected);
 
-    // TODO: test with a word with some flags set (HIDDEN & IMMEDIATE)
-
     // hide "base" and try to find it (should fail)
     let base_idx = vm.find("base").unwrap();
     vm.push_i32(base_idx);
@@ -695,7 +686,6 @@ fn test_word() {
     let adr = vm.pop_i32();
 
     let in_stream = vm.read_i32(mmap::IN_STREAM as i32);
-    // vm.dump(in_stream);
 
     let expected = "testing-word";
 
@@ -900,20 +890,6 @@ fn test_compilation() {
 }
 
 #[test]
-fn test_compilation_lit() {
-    let mut vm = create_vm();
-    vm.fill_input_buffer(": cells 4 * ; 16 cells bye ");
-
-    let quit = vm.find("quit").unwrap();
-
-    vm.run_word(quit as usize);
-
-    let result = vm.pop_i32();
-
-    assert_eq!(result, 64);
-}
-
-#[test]
 fn test_interpret() {
     let mut vm = create_vm();
     vm.fill_input_buffer("128 4+ 777 ");
@@ -949,12 +925,13 @@ fn test_interpret() {
 #[test]
 fn test_quit() {
     let mut vm = create_vm();
-    vm.fill_input_buffer("128 4+ bye ");
+    vm.fill_input_buffer(" : cells \n4 * \n; \\ some useless comment\n 16 cells\n bye foo");
 
-    let test_quit = vm.colon_def("test_quit", &["quit", "bye"]);
+    let quit = vm.find("quit").unwrap();
 
-    // testing-word
-    vm.run_word(test_quit as usize);
-    let value = vm.pop_i32();
-    assert_eq!(132, value);
+    vm.run_word(quit as usize);
+
+    let result = vm.pop_i32();
+
+    assert_eq!(result, 64);
 }

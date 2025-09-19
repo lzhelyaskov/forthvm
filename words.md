@@ -2,7 +2,7 @@ not all words are implemented yet!
 
 ### built-in variables
 * **state** *( -- 0 | 1)* Is the interpreter executing code (0) or compiling a word (1)
-* **latest** *( -- addr )* lates word in dictionary
+* **latest** *( -- addr )* latest word in dictionary
 * **here** *( -- addr )* next free byte of memory in dictionary
 * **dsp** *( -- addr )* top of param stack
 * **rsp** *( -- addr )* top of return stack
@@ -50,7 +50,7 @@ not all words are implemented yet!
 * **pick** *( n -- a )* copies nth stack item on top of the stack
 * **roll** *()*
 * **stack?** *( -- 1 | 0 )* returns true if stack underflow has occured
-* **depth** *( -- n ) 
+* **depth** *( -- n )* 
 
 ### return stack
 * **\>r** *( a -- r: a )* push value from param stack to return stack
@@ -92,7 +92,7 @@ not all words are implemented yet!
 
 ### flow control
 * **branch** *( -- )* unconditional branch 
-* **0branch** *( condition -- ) branch if condition is zero
+* **0branch** *( condition -- )* branch if condition is zero
 * if
 * else
 * then
