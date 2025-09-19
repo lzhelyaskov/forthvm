@@ -685,7 +685,8 @@ impl ForthVM {
                 "rdrop", // 53
                 "lit",   // 54
                 "63",    // 55
-                "emit", "exit", // quit here would be better, but how?
+                "emit",  // 56
+                "exit",  // quit here would be better, but how?
             ],
         );
         self.colon_def(
