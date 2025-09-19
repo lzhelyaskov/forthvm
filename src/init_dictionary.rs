@@ -618,8 +618,8 @@ impl ForthVM {
             IMMEDIATE,
             &["lit", "exit", ",", "latest", "@", "hidden", "[", "exit"],
         );
-        // TODO: handle PARSE_ERROR
-        // TODO: fix promt
+
+        // TODO: fix prompt
         self.colon_def(
             "interpret",
             &[
@@ -681,7 +681,11 @@ impl ForthVM {
                 ",",    // 50
                 "exit", // 51
                 // $PARSE_ERROR:
-                "exit", // 52
+                "rdrop", // 52  dropping no longer needed temporary values
+                "rdrop", // 53
+                "lit",   // 54
+                "63",    // 55
+                "emit", "exit", // quit here would be better, but how?
             ],
         );
         self.colon_def(
@@ -689,12 +693,9 @@ impl ForthVM {
             &[
                 "r0",        // 0
                 "rsp!",      // 1
-                "lit",       // 2
-                "62",        // 3
-                "emit",      // 4
-                "interpret", // 5
-                "branch",    // 6
-                "-28",       // 7 ( 0 - 7 ) * 4
+                "interpret", // 2
+                "branch",    // 3
+                "-16",       // 4 ( 0 - 4 ) * 4
             ],
         );
     }
