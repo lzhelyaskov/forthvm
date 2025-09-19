@@ -6,10 +6,6 @@ mod tests;
 
 pub const CELL: i32 = 4;
 
-// const fn cells(i: i32) -> i32 {
-//     i * CELL
-// }
-
 pub use forthvm::{ForthVM, VmConfig};
 
 /// memory map
@@ -76,30 +72,6 @@ const fn docol() -> [u8; 47] {
     let ic = mmap::IC.to_ne_bytes();
     let rsp = mmap::RSP.to_ne_bytes();
     let a0 = mmap::A0.to_ne_bytes();
-    /*
-        ; store ic on top of return stack
-        const IC
-        load
-        const RTOP
-        load
-        store
-        ; adjust top of return stack
-        const RTOP
-        dup
-        load
-        const 4
-        sub
-        swap store
-        ; adust ic
-        const a0
-        load
-        const 4
-        add
-        const IC
-        store 
-        next
-    */
-
     [
         I32_CONST, ic[0], ic[1], ic[2], ic[3], 
         I32_LOAD, 

@@ -280,14 +280,14 @@ impl ForthVM {
         new_last_word_idx
     }
 
-    pub (crate) fn write_previous_idx(&mut self) {
+    pub(crate) fn write_previous_idx(&mut self) {
         let next_empty_space = self.here();
         let last_word_idx = self.latest();
         self.write_i32(last_word_idx, next_empty_space);
         self.set_here(next_empty_space + 4);
     }
 
-    pub (crate) fn write_name(&mut self, name: &str, flags: u8) {
+    pub(crate) fn write_name(&mut self, name: &str, flags: u8) {
         let next_empty_space = self.here();
 
         let len = name.len();
@@ -322,7 +322,7 @@ impl ForthVM {
         self.set_here(next_empty_space + 4);
     }
 
-    pub (crate) fn write_colon_def(&mut self, calls: &[&str]) {
+    pub(crate) fn write_colon_def(&mut self, calls: &[&str]) {
         let mut next_empty_space = self.here();
         for call in calls {
             let c = if let Some(w) = self.find(call) {
@@ -476,8 +476,6 @@ impl ForthVM {
             idx += 16;
         }
     }
-
-    
 }
 
 fn print_c(c: u8) -> char {
@@ -512,7 +510,7 @@ fn print_input_buffer(vm: &VM) {
     );
 }
 
-pub (crate) fn read_next_char(vm: &mut VM) -> Option<u8> {
+pub(crate) fn read_next_char(vm: &mut VM) -> Option<u8> {
     let input_buffer = vm.read_i32(mmap::INPUT_BUFFER);
     let input_buffer_idx = vm.read_i32(mmap::INPUT_BUFFER_IDX);
     let len = vm.read_u8(input_buffer as usize);
@@ -526,7 +524,7 @@ pub (crate) fn read_next_char(vm: &mut VM) -> Option<u8> {
     Some(c)
 }
 
-pub (crate) fn fill_input_buffer(vm: &mut VM, s: &str) {
+pub(crate) fn fill_input_buffer(vm: &mut VM, s: &str) {
     let input_buf = vm.read_i32(mmap::INPUT_BUFFER);
 
     let len = s.len();

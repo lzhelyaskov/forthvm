@@ -1,9 +1,12 @@
 use std::io::BufRead;
 
-use toyvm::{opcode, VM};
+use toyvm::{VM, opcode};
 
-use crate::{forthvm::{fill_input_buffer, read_next_char}, mmap, ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN};
-
+use crate::{
+    ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN,
+    forthvm::{fill_input_buffer, read_next_char},
+    mmap,
+};
 
 impl ForthVM {
     pub fn init_dictionary(&mut self) {
@@ -164,6 +167,20 @@ impl ForthVM {
         self.builtin("c!", &[opcode::I32_STORE_8, opcode::NEXT]);
         self.builtin("c@", &[opcode::I32_LOAD_8, opcode::NEXT]);
 
+        self.builtin(
+            "negate",
+            &[
+                opcode::I32_CONST,
+                0,
+                0,
+                0,
+                0,
+                opcode::SWAP,
+                opcode::SUB,
+                opcode::NEXT,
+            ],
+        );
+
         self.builtin("bye", &[opcode::END]);
         self.builtin(
             "execute",
@@ -179,11 +196,6 @@ impl ForthVM {
                 opcode::JMP,
             ],
         );
-
-        /*
-            vm.push(vm.read(ic))
-            ic += 4
-        */
 
         self.builtin(
             "lit",
@@ -212,18 +224,6 @@ impl ForthVM {
                 opcode::NEXT,
             ],
         );
-
-        // const RTOP
-        // load         -- rtop
-        // const 4      -- rtop 4
-        // add  ;       -- (rtop + 4)
-        // dup          -- (rtop + 4) (rtop + 4)
-        // const RTOP   -- (rtop + 4) (rtop + 4) RTOP
-        // store        -- (rtop + 4)
-        // load         -- ic
-        // const IC     -- ic IC
-        // store
-        // next
 
         self.builtin(
             "exit",
@@ -258,19 +258,6 @@ impl ForthVM {
             ],
         );
 
-        /*
-            const 8  -- x 8
-            load     -- x *8
-            store    --           x is at memory[memory[8]] (top of return stack)
-
-            const 8  -- 8
-            dup
-            load     -- 8 *8
-            const 4  -- 8 *8 4
-            sub      -- 8 (*8 - 4)
-            swap     -- (*8 - 4) 8
-            store    --           rtop should be increased by one cell
-        */
         self.builtin(
             ">r",
             &[
@@ -299,17 +286,7 @@ impl ForthVM {
                 opcode::NEXT,
             ],
         );
-        /*
-            const 8  -- 8
-            load     -- *8
-            const 4  -- *8 4
-            add      -- (*8 + 4)
-            dup      -- (*8 + 4) (*8 + 4)
-            load     -- (*8 + 4) *(*8 + 4)
-            swap     -- *(*8 - 4) (*8 - 4)
-            const 8  -- *(*8 - 4) (*8 - 4) 8
-            store    -- *(*8 - 4)
-        */
+
         self.builtin(
             "r>",
             &[
@@ -620,8 +597,8 @@ impl ForthVM {
         self.vm_call("number", &number);
         self.vm_call(",", &comma);
         self.vm_call("create", &create);
-        // TODO: rewrite as negate = i32.sub(0, x)
-        self.colon_def("negate", &["lit", "-1", "*", "exit"]);
+
+        // TODO: better way to do 2dup
         self.colon_def(
             "2dup",
             &["dup", ">r", "swap", "dup", ">r", "swap", "r>", "r>", "exit"],
@@ -724,7 +701,6 @@ impl ForthVM {
         );
     }
 }
-
 
 fn print_top_value(vm: &mut VM) {
     let value = vm.pop_i32();
@@ -836,9 +812,8 @@ fn _number(vm: &mut VM, len: i32, caddr: i32) -> (i32, i32) {
     }
 
     if is_negative {
-        result = std::ops::Neg::neg(result)
+        result = -result;
     }
-    // dbg!(result);
     (result, 0)
 }
 
