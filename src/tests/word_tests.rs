@@ -98,7 +98,6 @@ fn test_arithmetic() {
     let result = vm.pop_i32();
 
     assert_eq!(result, 7, "max");
-    // TODO:
 
     vm.push_i32(-1);
 
@@ -841,17 +840,14 @@ fn test_colon() {
     let xt = vm.cfa(latest_after);
     assert_eq!(vm.read_i32(xt), mmap::DOCOL as i32, "DOCOL is set");
 
-    // TODO: assert word is hidden
+    assert_eq!(len & HIDDEN, HIDDEN);
     assert_eq!(vm.state(), 1, "compiling");
 }
 
 #[test]
 fn test_compilation() {
     let mut vm = create_vm();
-    // {
-    //     let idx = vm.find("2dup").unwrap();
-    //     vm.dump(idx as usize);
-    // }
+
     vm.fill_input_buffer(": square dup * ; ");
 
     let test_compile = vm.colon_def(
@@ -863,8 +859,6 @@ fn test_compilation() {
 
     let square_idx = vm.find("square");
     assert!(square_idx.is_some());
-
-    // vm.dump(square_idx.unwrap() as usize);
 
     let idx = square_idx.unwrap();
     assert_eq!(idx, vm.latest(), "latest has been updated");

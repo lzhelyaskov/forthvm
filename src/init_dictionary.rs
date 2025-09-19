@@ -609,16 +609,14 @@ impl ForthVM {
         self.colon_def(
             ":",
             &[
-                "word", "create", "DOCOL", ",", /*  "latest", "@", "hidden", */ "]", "exit",
+                "word", "create", "DOCOL", ",", "latest", "@", "hidden", "]", "exit",
             ],
         );
 
         self.colon_def_ex(
             ";",
             IMMEDIATE,
-            &[
-                "lit", "exit", ",", /* "latest", "@", "hidden", */ "[", "exit",
-            ],
+            &["lit", "exit", ",", "latest", "@", "hidden", "[", "exit"],
         );
         // TODO: handle PARSE_ERROR
         // TODO: fix promt
