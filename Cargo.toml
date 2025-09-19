@@ -1,0 +1,7 @@
+[package]
+edition = "2024"
+name = "forthvm"
+version = "0.1.0"
+
+[dependencies]
+toyvm = {path = "../toyvm"}
