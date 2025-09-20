@@ -31,7 +31,6 @@ pub struct VmConfig {
 
 pub struct ForthVM {
     pub(crate) vm: VM,
-    // input_buf: InputBuf,
     vocabulary: HashMap<i32, String>,
 }
 
@@ -57,8 +56,8 @@ impl ForthVM {
         vm.write_i32(cstack_top as i32, mmap::LBASE);
 
         vm.write_i32(10, mmap::BASE);
-        vm.write_i32(0, mmap::IC);
-        vm.write_i32(0, mmap::A0);
+        // vm.write_i32(0, mmap::IC);
+        // vm.write_i32(0, mmap::A0);
 
         vm.write_i32(mmap::DICT as i32, mmap::HERE);
 
@@ -73,7 +72,6 @@ impl ForthVM {
         vm.add_unknown_op_handler(&next_handler);
         ForthVM {
             vm,
-            // input_buf: InputBuf::new(String::new()),
             vocabulary: HashMap::new(),
         }
     }
@@ -192,19 +190,19 @@ impl ForthVM {
         self.write_i32(value, mmap::STATE as i32);
     }
 
-    pub fn cfa(&self, idx: i32) -> i32 {
-        let len = self.read_u8(idx + 4) & LEN_MASK;
-        let n = (len as usize).min(MAX_WORD_LEN) as i32;
-
-        align(idx + n + 5)
-    }
-
     pub fn is_compiling(&self) -> bool {
         self.state() == COMPILING
     }
 
     pub fn is_interpreting(&self) -> bool {
         self.state() == INTERPRETING
+    }
+
+    pub fn cfa(&self, idx: i32) -> i32 {
+        let len = self.read_u8(idx + 4) & LEN_MASK;
+        let n = (len as usize).min(MAX_WORD_LEN) as i32;
+
+        align(idx + n + 5)
     }
 
     pub fn find(&self, name: &str) -> Option<i32> {
@@ -255,10 +253,8 @@ impl ForthVM {
         let new_last_word_idx = self.here();
         self.write_previous_idx();
         self.write_name(name, flags);
-
         self.write_codeword_builtin();
         self.write_code(code);
-
         self.set_latest(new_last_word_idx);
 
         self.vocabulary
@@ -277,10 +273,11 @@ impl ForthVM {
         self.write_name(name, flags);
         self.write_docol_addr();
         self.write_colon_def(calls);
-
         self.set_latest(new_last_word_idx);
+
         self.vocabulary
             .insert(self.cfa(new_last_word_idx), name.to_string());
+
         new_last_word_idx
     }
 
@@ -373,7 +370,7 @@ impl ForthVM {
 
     pub fn print_word(&self, idx: i32) {
         let prev_idx = self.read_i32(idx);
-        let name_len = self.read_u8(idx + 4);
+        let name_len = self.read_u8(idx + 4) & LEN_MASK;
         let mut name = String::new();
         let n = name_len.min(MAX_WORD_LEN as u8) as i32;
 
