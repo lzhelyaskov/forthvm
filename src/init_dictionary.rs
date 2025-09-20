@@ -3,7 +3,7 @@ use std::io::BufRead;
 use toyvm::{VM, opcode};
 
 use crate::{
-    ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN,
+    ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN, align,
     forthvm::{fill_input_buffer, read_next_char},
     mmap,
 };
@@ -518,7 +518,7 @@ impl ForthVM {
                 0,
                 0,
                 opcode::ADD,
-                opcode::DUP, // [ (idx + 4) (idx + 4) ]
+                opcode::DUP,        // [ (idx + 4) (idx + 4) ]
                 opcode::I32_LOAD_8, // [ (idx + 4) len ]
                 opcode::I32_CONST,
                 LEN_MASK,
@@ -757,16 +757,11 @@ fn create(vm: &mut VM) {
     vm.write_u8(len as u8, here as usize);
     here += 1;
 
-    vm.memcopy(
-        ptr as usize,
-        here as usize,
-        (len as usize).min(MAX_WORD_LEN),
-    );
-    // here += len.min(MAX_WORD_LEN as i32);
-    // here += 7;
-    // here &= !7;
-    // TODO: fix this
-    here += 7;
+    let n = (len as usize).min(MAX_WORD_LEN);
+
+    vm.memcopy(ptr as usize, here as usize, n);
+
+    here = align(here + n as i32);
 
     vm.write_i32(here, mmap::HERE);
     vm.write_i32(current, mmap::LATEST);
