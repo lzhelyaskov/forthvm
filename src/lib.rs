@@ -96,3 +96,7 @@ const fn docol() -> [u8; 47] {
         NEXT,
     ]
 }
+
+pub(crate) fn align(idx: i32) -> i32 {
+    (idx + 3) & !3
+}

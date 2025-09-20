@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::align;
 use crate::{COMPILING, INTERPRETING, LEN_MASK, MAX_WORD_LEN, docol, mmap};
 use toyvm::VM;
 use toyvm::opcode;
@@ -192,7 +193,10 @@ impl ForthVM {
     }
 
     pub fn cfa(&self, idx: i32) -> i32 {
-        idx + 12
+        let len = self.read_u8(idx + 4) & LEN_MASK;
+        let n = (len as usize).min(MAX_WORD_LEN) as i32;
+
+        align(idx + n + 5)
     }
 
     pub fn is_compiling(&self) -> bool {
@@ -280,11 +284,14 @@ impl ForthVM {
         new_last_word_idx
     }
 
-    pub(crate) fn write_previous_idx(&mut self) {
+    fn compile_cell(&mut self, value: i32) {
         let next_empty_space = self.here();
-        let last_word_idx = self.latest();
-        self.write_i32(last_word_idx, next_empty_space);
+        self.write_i32(value, next_empty_space);
         self.set_here(next_empty_space + 4);
+    }
+
+    pub(crate) fn write_previous_idx(&mut self) {
+        self.compile_cell(self.latest());
     }
 
     pub(crate) fn write_name(&mut self, name: &str, flags: u8) {
@@ -292,18 +299,15 @@ impl ForthVM {
 
         let len = name.len();
         self.write_u8(len as u8 | flags, next_empty_space);
-        self.vm.write(
-            next_empty_space as usize + 1,
-            &name.as_bytes()[..len.min(MAX_WORD_LEN)],
-        );
+        let n = len.min(MAX_WORD_LEN);
+        self.vm
+            .write(next_empty_space as usize + 1, &name.as_bytes()[..n]);
 
-        self.set_here(next_empty_space + 8);
+        self.set_here(align(next_empty_space + n as i32 + 1));
     }
 
     fn write_codeword_builtin(&mut self) {
-        let next_empty_space = self.here();
-        self.write_i32(next_empty_space + 4, next_empty_space);
-        self.set_here(next_empty_space + 4);
+        self.compile_cell(self.here() + 4);
     }
 
     fn write_code(&mut self, code: &[u8]) {
@@ -311,19 +315,14 @@ impl ForthVM {
         let n = code.len() as i32;
 
         self.vm.write(next_empty_space as usize, code);
-        let remainder = n % 4;
-
-        self.set_here(next_empty_space + n + remainder);
+        self.set_here(align(next_empty_space + n));
     }
 
     fn write_docol_addr(&mut self) {
-        let next_empty_space = self.here();
-        self.write_i32(mmap::DOCOL as i32, next_empty_space);
-        self.set_here(next_empty_space + 4);
+        self.compile_cell(mmap::DOCOL as i32);
     }
 
     pub(crate) fn write_colon_def(&mut self, calls: &[&str]) {
-        let mut next_empty_space = self.here();
         for call in calls {
             let c = if let Some(w) = self.find(call) {
                 self.cfa(w)
@@ -332,10 +331,8 @@ impl ForthVM {
             } else {
                 panic!("{call}?")
             };
-            self.vm.write_i32(c, next_empty_space as usize);
-            next_empty_space += 4
+            self.compile_cell(c);
         }
-        self.set_here(next_empty_space);
     }
 
     pub fn print_4th_vars(&self) {

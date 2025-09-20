@@ -445,6 +445,22 @@ fn test_comparison() {
 }
 
 #[test]
+fn test_cfa() {
+    let mut vm = create_vm();
+
+    let test_cfa = vm.colon_def("test_cfa", &[">cfa", "bye"]);
+
+    let state_idx = vm.find("state").unwrap();
+
+    vm.push_i32(state_idx);
+    vm.run_word(test_cfa as usize);
+
+    let result = vm.pop_i32();
+
+    assert_eq!(vm.cfa(state_idx), result);
+}
+
+#[test]
 fn test_state_and_brac() {
     let mut vm = create_vm();
 

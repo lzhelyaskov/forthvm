@@ -506,26 +506,49 @@ impl ForthVM {
             ],
         );
 
-        // TODO: handle variable name len
-        /*
-            add 4
-            dup
-            i8.load
-            const LEN_MASK
-            and
-            const MAX_WORD_LEN
-            min
-            const 3
-            add
-            add
-            const !3
-            xor
-            next
-        */
+        // (idx + 3) & !3
+        let mwl = (MAX_WORD_LEN as i32).to_ne_bytes();
+        let not_3 = (!3_i32).to_ne_bytes();
         self.builtin(
             ">cfa",
-            &[opcode::I32_CONST, 12, 0, 0, 0, opcode::ADD, opcode::NEXT],
+            &[
+                opcode::I32_CONST,
+                4,
+                0,
+                0,
+                0,
+                opcode::ADD,
+                opcode::DUP, // [ (idx + 4) (idx + 4) ]
+                opcode::I32_LOAD_8, // [ (idx + 4) len ]
+                opcode::I32_CONST,
+                LEN_MASK,
+                0,
+                0,
+                0,           // [ (idx + 4) len len_mask ]
+                opcode::AND, // [ (idx + 4) n ]
+                opcode::I32_CONST,
+                mwl[0],
+                mwl[1],
+                mwl[2],
+                mwl[3],
+                opcode::MIN,
+                opcode::ADD, // // [ (idx + 4 + n) ]
+                opcode::I32_CONST,
+                4,
+                0,
+                0,
+                0,
+                opcode::ADD,
+                opcode::I32_CONST,
+                not_3[0],
+                not_3[1],
+                not_3[2],
+                not_3[3],
+                opcode::AND,
+                opcode::NEXT,
+            ],
         );
+
         self.builtin_ex(
             "[",
             IMMEDIATE,

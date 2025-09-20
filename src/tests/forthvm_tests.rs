@@ -73,7 +73,7 @@ fn test_write_name_ex() {
 }
 
 #[test]
-fn test_write_coldef_ex() {
+fn test_write_col_def() {
     let conf = VmConfig {
         memory_size_bytes: 0x10000,
         parameter_stack_size_cells: 256,
@@ -101,7 +101,7 @@ fn test_write_coldef_ex() {
 }
 
 #[test]
-fn test_add_word_builtin_ex() {
+fn test_builtin() {
     let conf = VmConfig {
         memory_size_bytes: 0x10000,
         parameter_stack_size_cells: 256,
@@ -179,7 +179,7 @@ fn test_find() {
 }
 
 #[test]
-fn test_add_col_word_ex() {
+fn test_colon_def() {
     let conf = VmConfig {
         memory_size_bytes: 0x10000,
         parameter_stack_size_cells: 256,
