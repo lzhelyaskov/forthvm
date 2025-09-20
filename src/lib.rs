@@ -53,7 +53,7 @@ pub mod mmap {
     /// start of forth dictionary
     pub const DICT: usize = DOCOL + 64;
 }
-pub const MAX_WORD_LEN: usize = 7;
+pub const MAX_WORD_LEN: usize = 13;
 
 pub const LEN_MASK: u8 = 0x1f;
 pub const HIDDEN: u8 = 0x20;

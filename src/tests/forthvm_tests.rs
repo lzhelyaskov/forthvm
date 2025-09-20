@@ -1,5 +1,5 @@
 use crate::mmap::{self, STATE};
-use crate::{ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN, VmConfig};
+use crate::{ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN, VmConfig, align};
 use toyvm::opcode;
 
 #[test]
@@ -60,12 +60,15 @@ fn test_write_name_ex() {
     vm.write_name("foobarooo", HIDDEN | IMMEDIATE);
 
     let len_byte = vm.read_u8(here);
+    let len = (len_byte & LEN_MASK) as usize;
 
     assert_eq!(len_byte & HIDDEN, HIDDEN, "HIDDEN flag set");
     assert_eq!(len_byte & IMMEDIATE, IMMEDIATE, "IMMEDIATE flag set");
-    assert_eq!(len_byte & LEN_MASK, 9);
+    assert_eq!(len, 9);
 
-    assert_eq!(vm.here(), here + 8);
+    let n = MAX_WORD_LEN.min(len) as i32;
+
+    assert_eq!(vm.here(), align(here + n + 1));
 
     for (i, b) in "foobarooo".as_bytes().iter().take(MAX_WORD_LEN).enumerate() {
         assert_eq!(*b, vm.read_u8(here + 1 + i as i32));
