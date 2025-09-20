@@ -69,7 +69,7 @@ not all words are implemented yet!
 * **max** *( a b -- a | b )* max value
 
 ### output
-* **.** *( a -- )* print top value on stack and drop it
+* **.** *( a -- )* print top value on stack followed by space and drop it
 * **?** *( addr -- )* print value addr is pointing to ( same as : @ . )
 * **.s** *( -- )* print param stack without destroying it
 * **.r** *( -- )* print return stack without destroying it

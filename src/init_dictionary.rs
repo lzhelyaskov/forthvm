@@ -727,7 +727,7 @@ impl ForthVM {
 
 fn print_top_value(vm: &mut VM) {
     let value = vm.pop_i32();
-    print!("{value}");
+    print!("{value} ");
 }
 
 fn emit_char(vm: &mut VM) {
