@@ -130,20 +130,24 @@ impl ForthVM {
 
         self.builtin("true", &[opcode::I32_CONST, 1, 0, 0, 0, opcode::NEXT]);
         self.builtin("false", &[opcode::I32_CONST, 0, 0, 0, 0, opcode::NEXT]);
+        self.builtin("not", &[opcode::EQZ, opcode::NEXT]);
 
         self.builtin("drop", &[opcode::DROP, opcode::NEXT]);
         self.builtin("swap", &[opcode::SWAP, opcode::NEXT]);
         self.builtin("dup", &[opcode::DUP, opcode::NEXT]);
         //self.add_word_builtin(vm, "over", &[opcode::, opcode::NEXT]);
         self.builtin("+", &[opcode::ADD, opcode::NEXT]);
-        self.builtin(
-            "1+",
-            &[opcode::I32_CONST, 1, 0, 0, 0, opcode::ADD, opcode::NEXT],
-        );
+        self.builtin("1+", &[opcode::INC, opcode::NEXT]);
+        self.builtin("1-", &[opcode::DEC, opcode::NEXT]);
         self.builtin(
             "4+",
             &[opcode::I32_CONST, 4, 0, 0, 0, opcode::ADD, opcode::NEXT],
         );
+        self.builtin(
+            "4-",
+            &[opcode::I32_CONST, 4, 0, 0, 0, opcode::SUB, opcode::NEXT],
+        );
+
         self.builtin("-", &[opcode::SUB, opcode::NEXT]);
         self.builtin("*", &[opcode::MUL, opcode::NEXT]);
         self.builtin("/", &[opcode::DIV_S, opcode::NEXT]);
@@ -357,6 +361,35 @@ impl ForthVM {
                 rsp[1],
                 rsp[2],
                 rsp[3],
+                opcode::I32_LOAD,
+                opcode::NEXT,
+            ],
+        );
+
+        // TODO: write tests for dsp! , dsp@
+        self.builtin_ex(
+            "dsp!",
+            0,
+            &[
+                opcode::I32_CONST,
+                dsp[0],
+                dsp[1],
+                dsp[2],
+                dsp[3],
+                opcode::I32_STORE,
+                opcode::NEXT,
+            ],
+        );
+
+        self.builtin_ex(
+            "dsp@",
+            0,
+            &[
+                opcode::I32_CONST,
+                dsp[0],
+                dsp[1],
+                dsp[2],
+                dsp[3],
                 opcode::I32_LOAD,
                 opcode::NEXT,
             ],
@@ -619,6 +652,7 @@ impl ForthVM {
         self.vm_call("number", &number);
         self.vm_call(",", &comma);
         self.vm_call("create", &create);
+        self.vm_call("char", &read_char);
 
         // TODO: better way to do 2dup
         self.colon_def(
@@ -885,6 +919,12 @@ fn _word(vm: &mut VM) -> (i32, i32) {
     }
     // print_in_stream(vm, buf_ptr, len);
     (len, buf_ptr)
+}
+
+fn read_char(vm: &mut VM) {
+    let (_, buf_ptr) = _word(vm);
+    let c = vm.read_u8(buf_ptr as usize);
+    vm.push_i32(c as i32);
 }
 
 fn skip_white_space(vm: &mut VM) -> char {

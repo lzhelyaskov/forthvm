@@ -43,7 +43,7 @@ pub fn in_stream_from_stdin() {
     IN_STREAM.replace(Some(InputStream::from_stdin()));
 }
 
-pub fn in_steam_from_file(file: File) {
+pub fn in_stream_from_file(file: File) {
     IN_STREAM.replace(Some(InputStream::from_file(file)));
 }
 

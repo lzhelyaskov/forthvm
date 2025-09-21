@@ -35,6 +35,9 @@ fn test_arithmetic() {
     let test_add_one = vm.colon_def("test_add_one", &["1+", "bye"]);
     let test_add_four = vm.colon_def("test_add_four", &["4+", "bye"]);
 
+    let test_sub_one = vm.colon_def("test_sub_one", &["1-", "bye"]);
+    let test_sub_four = vm.colon_def("test_sub_four", &["4-", "bye"]);
+
     vm.push_i32(3);
     vm.push_i32(7);
 
@@ -118,10 +121,15 @@ fn test_arithmetic() {
     let result = vm.pop_i32();
     assert_eq!(result, 10);
 
-    vm.push_i32(16);
-    vm.run_word(test_add_four as usize);
+    vm.push_i32(9);
+    vm.run_word(test_sub_one as usize);
     let result = vm.pop_i32();
-    assert_eq!(result, 20);
+    assert_eq!(result, 8);
+
+    vm.push_i32(16);
+    vm.run_word(test_sub_four as usize);
+    let result = vm.pop_i32();
+    assert_eq!(result, 12);
     /*
            vm.push_i32(-1);
 
@@ -711,6 +719,25 @@ fn test_word() {
     for (i, c) in expected.as_bytes().iter().enumerate() {
         assert_eq!(*c, vm.read_u8(in_stream + i as i32));
     }
+}
+
+#[test]
+fn test_char() {
+    let mut vm = create_vm();
+    let test_char = vm.colon_def("test_char", &["char", "char", "char", "bye"]);
+
+    vm.fill_input_buffer("     \\sbvasd\n a bc c ");
+
+    // testing-word
+    vm.run_word(test_char as usize);
+
+    let c = vm.pop_i32() as u8 as char;
+    let b = vm.pop_i32() as u8 as char;
+    let a = vm.pop_i32() as u8 as char;
+
+    assert_eq!(a, 'a');
+    assert_eq!(b, 'b');
+    assert_eq!(c, 'c');
 }
 
 #[test]
