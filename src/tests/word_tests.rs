@@ -130,6 +130,11 @@ fn test_arithmetic() {
     vm.run_word(test_sub_four as usize);
     let result = vm.pop_i32();
     assert_eq!(result, 12);
+
+    vm.push_i32(16);
+    vm.run_word(test_add_four as usize);
+    let result = vm.pop_i32();
+    assert_eq!(result, 20);
     /*
            vm.push_i32(-1);
 

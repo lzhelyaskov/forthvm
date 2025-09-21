@@ -504,7 +504,7 @@ fn print_input_buffer(vm: &VM) {
     );
 }
 
-pub(crate) fn print_in_stream(vm: &VM, ptr: i32, n: i32) {
+pub(crate) fn _print_in_stream(vm: &VM, ptr: i32, n: i32) {
     let mut s = String::new();
 
     for i in 0..n {
