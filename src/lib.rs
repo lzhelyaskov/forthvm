@@ -1,5 +1,6 @@
 mod forthvm;
 mod init_dictionary;
+mod input_stream;
 
 #[cfg(test)]
 mod tests;
@@ -7,6 +8,7 @@ mod tests;
 pub const CELL: i32 = 4;
 
 pub use forthvm::{ForthVM, VmConfig};
+pub use input_stream::*;
 
 /// memory map
 /// where is stuff stored in memory

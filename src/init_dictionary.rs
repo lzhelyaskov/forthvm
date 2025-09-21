@@ -1,10 +1,9 @@
-use std::io::BufRead;
-
 use toyvm::{VM, opcode};
 
 use crate::{
     ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN, align,
     forthvm::{fill_input_buffer, read_next_char},
+    input_stream::{in_stream_from_stdin, in_stream_is_terminal, in_stream_read_line},
     mmap,
 };
 
@@ -836,62 +835,69 @@ fn _number(vm: &mut VM, len: i32, caddr: i32) -> (i32, i32) {
 }
 
 fn key(vm: &mut VM) {
-    let stdin = std::io::stdin();
-    std::io::Write::flush(&mut std::io::stdout()).unwrap();
-    let c = _key(vm, &mut stdin.lock());
+    let c = _key(vm);
     vm.push_i32(c as i32);
 }
 
-fn _key(vm: &mut VM, buf_read: &mut dyn BufRead) -> char {
+fn _key(vm: &mut VM) -> char {
     if let Some(c) = read_next_char(vm) {
         c as char
     } else {
         let mut line = String::new();
-        loop {
-            line.clear();
-            let _n = buf_read.read_line(&mut line).unwrap();
-            fill_input_buffer(vm, &line);
-            if let Some(c) = read_next_char(vm) {
-                break c as char;
-            }
+
+        if in_stream_is_terminal() {
+            print_prompt();
         }
+
+        let n = in_stream_read_line(&mut line);
+        if n == 0 {
+            // lets hope it was eof
+            in_stream_from_stdin();
+            return '\n';
+        }
+
+        fill_input_buffer(vm, &line);
+        return read_next_char(vm).unwrap() as char;
     }
+}
+
+fn print_prompt() {
+    print!("\n> ");
+    std::io::Write::flush(&mut std::io::stdout()).unwrap();
 }
 
 // ( -- c-addr len)
 fn word(vm: &mut VM) {
-    let stdin = std::io::stdin();
-    std::io::Write::flush(&mut std::io::stdout()).unwrap();
-
-    let (len, in_stream) = _word(vm, &mut stdin.lock());
+    let (len, in_stream) = _word(vm);
     vm.push_i32(in_stream);
     vm.push_i32(len);
 }
 
-fn _word(vm: &mut VM, buf_read: &mut dyn BufRead) -> (i32, i32) {
-    let mut c = skip_white_space(vm, buf_read);
+fn _word(vm: &mut VM) -> (i32, i32) {
+    let mut c = skip_white_space(vm);
 
     let mut len = 0;
     let buf_ptr = vm.read_i32(mmap::IN_STREAM);
     while !c.is_ascii_whitespace() {
         vm.write_u8(c as u8, (buf_ptr + len) as usize);
         len += 1;
-        c = _key(vm, buf_read);
+        c = _key(vm);
     }
+    // print_in_stream(vm, buf_ptr, len);
     (len, buf_ptr)
 }
 
-fn skip_white_space(vm: &mut VM, buf_read: &mut dyn BufRead) -> char {
-    let mut c = _key(vm, buf_read);
+fn skip_white_space(vm: &mut VM) -> char {
+    let mut c = _key(vm);
     loop {
         while c.is_ascii_whitespace() {
-            c = _key(vm, buf_read);
+            c = _key(vm);
         }
 
         if c == '\\' {
-            c = _key(vm, buf_read);
+            c = _key(vm);
             while c != '\n' {
-                c = _key(vm, buf_read);
+                c = _key(vm);
             }
         } else {
             break c;
