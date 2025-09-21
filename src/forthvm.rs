@@ -504,16 +504,6 @@ fn print_input_buffer(vm: &VM) {
     );
 }
 
-pub(crate) fn _print_in_stream(vm: &VM, ptr: i32, n: i32) {
-    let mut s = String::new();
-
-    for i in 0..n {
-        s.push(vm.read_u8((ptr + i) as usize) as char);
-    }
-
-    println!("{s}");
-}
-
 pub(crate) fn read_next_char(vm: &mut VM) -> Option<u8> {
     let input_buffer = vm.read_i32(mmap::INPUT_BUFFER);
     let input_buffer_idx = vm.read_i32(mmap::INPUT_BUFFER_IDX);

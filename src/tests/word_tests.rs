@@ -26,6 +26,7 @@ fn test_arithmetic() {
     let test_mul = vm.colon_def("test_mul", &["*", "bye"]);
     let test_div = vm.colon_def("test_div", &["/", "bye"]);
     let test_mod = vm.colon_def("test_mod", &["mod", "bye"]);
+    let test_div_mod = vm.colon_def("test_div_mod", &["/mod", "bye"]);
 
     let test_min = vm.colon_def("test_min", &["min", "bye"]);
     let test_max = vm.colon_def("test_max", &["max", "bye"]);
@@ -85,6 +86,16 @@ fn test_arithmetic() {
     let result = vm.pop_i32();
 
     assert_eq!(result, 3, "modulo");
+
+    vm.push_i32(9);
+    vm.push_i32(2);
+
+    vm.run_word(test_div_mod as usize);
+    let q = vm.pop_i32();
+    let r = vm.pop_i32();
+
+    assert_eq!(q, 4, "div_mod");
+    assert_eq!(r, 1, "div_mod");
 
     vm.push_i32(7);
     vm.push_i32(4);
@@ -267,6 +278,8 @@ fn test_param_stack() {
     let test_dup = vm.colon_def("test_dup", &["dup", "bye"]);
     let test_swap = vm.colon_def("test_swap", &["swap", "bye"]);
     let test_drop = vm.colon_def("test_drop", &["drop", "bye"]);
+    let test_2drop = vm.colon_def("test_2drop", &["2drop", "bye"]);
+    let test_qdup = vm.colon_def("test_qdup", &["?dup", "bye"]);
     let test_2dup = vm.colon_def("test_2dup", &["2dup", "bye"]);
 
     // TODO: rot pick roll stack?
@@ -300,6 +313,15 @@ fn test_param_stack() {
 
     assert_eq!(a, 42, "drop");
 
+    vm.push_i32(11);
+    vm.push_i32(42);
+    vm.push_i32(4711);
+
+    vm.run_word(test_2drop as usize);
+    let a = vm.pop_i32();
+
+    assert_eq!(a, 11, "2drop");
+
     vm.push_i32(55);
     vm.push_i32(66);
 
@@ -314,6 +336,26 @@ fn test_param_stack() {
     assert_eq!(b, 55);
     assert_eq!(c, 66);
     assert_eq!(d, 55);
+
+
+    vm.push_i32(7);
+    vm.run_word(test_qdup as usize);
+
+    let a = vm.pop_i32();
+    let b = vm.pop_i32();
+
+    assert_eq!(a, 7);
+    assert_eq!(b, 7);
+
+    vm.push_i32(7);
+    vm.push_i32(0);
+    vm.run_word(test_qdup as usize);
+
+    let a = vm.pop_i32();
+    let b = vm.pop_i32();
+
+    assert_eq!(a, 0);
+    assert_eq!(b, 7);
 }
 
 #[test]

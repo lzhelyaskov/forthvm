@@ -133,8 +133,19 @@ impl ForthVM {
         self.builtin("not", &[opcode::EQZ, opcode::NEXT]);
 
         self.builtin("drop", &[opcode::DROP, opcode::NEXT]);
+        self.builtin("2drop", &[opcode::DROP, opcode::DROP, opcode::NEXT]);
         self.builtin("swap", &[opcode::SWAP, opcode::NEXT]);
         self.builtin("dup", &[opcode::DUP, opcode::NEXT]);
+        self.builtin("?dup", &[
+            opcode::DUP,
+            opcode::JZI,    // 0
+            5,              // 1
+            0,              // 2
+            0,              // 3
+            0,              // 4
+            opcode::DUP,    // 5
+            opcode::NEXT,   // 6
+        ]);
         //self.add_word_builtin(vm, "over", &[opcode::, opcode::NEXT]);
         self.builtin("+", &[opcode::ADD, opcode::NEXT]);
         self.builtin("1+", &[opcode::INC, opcode::NEXT]);
@@ -196,7 +207,7 @@ impl ForthVM {
                 a0[3],
                 opcode::I32_STORE,
                 opcode::I32_LOAD,
-                opcode::JMP,
+                opcode::BR,
             ],
         );
 
@@ -207,23 +218,52 @@ impl ForthVM {
                 ic[0],
                 ic[1],
                 ic[2],
-                ic[3],            // 24
-                opcode::I32_LOAD, // mem[24]
-                opcode::DUP,      // mem[24], mem[24]
-                opcode::I32_LOAD, // mem[24],
-                opcode::SWAP,     // mem[mem[24]], mem[24]
+                ic[3],            
+                opcode::I32_LOAD,
+                opcode::DUP,      
+                opcode::I32_LOAD, 
+                opcode::SWAP,     
                 opcode::I32_CONST,
                 4,
                 0,
                 0,
-                0,           // mem[mem[24]], mem[24], 4
-                opcode::ADD, // mem[mem[24]], mem[24] + 4
+                0,           
+                opcode::ADD, 
                 opcode::I32_CONST,
                 ic[0],
                 ic[1],
                 ic[2],
-                ic[3],             // mem[mem[24]], mem[24] + 4, 24
-                opcode::I32_STORE, // mem[mem[24]]
+                ic[3],             
+                opcode::I32_STORE,
+                opcode::NEXT,
+            ],
+        );
+        /*
+            ic points to string.len
+            ic + 4 points to first char
+            ( -- c-addr len)
+        */
+
+        self.builtin(
+            "litstring",
+            &[
+                opcode::I32_CONST, ic[0],ic[1],ic[2],ic[3],            
+                opcode::I32_LOAD, 
+                opcode::DUP,      
+                opcode::I32_LOAD, 
+                opcode::SWAP,     
+                opcode::I32_CONST,
+                4,
+                0,
+                0,
+                0,           
+                opcode::ADD, 
+                opcode::I32_CONST,
+                ic[0],
+                ic[1],
+                ic[2],
+                ic[3],       
+                opcode::I32_STORE,
                 opcode::NEXT,
             ],
         );
@@ -441,7 +481,7 @@ impl ForthVM {
         self.builtin(
             "0branch",
             &[
-                opcode::BRZ,
+                opcode::BRZI,
                 branch_code[0],
                 branch_code[1],
                 branch_code[2],
@@ -647,12 +687,14 @@ impl ForthVM {
 
         self.vm_call(".", &print_top_value);
         self.vm_call("emit", &emit_char);
+        self.vm_call("tell", &tell);
         self.vm_call("find", &find);
 
         self.vm_call("number", &number);
         self.vm_call(",", &comma);
         self.vm_call("create", &create);
         self.vm_call("char", &read_char);
+        self.vm_call("/mod", &div_mod);
 
         // TODO: better way to do 2dup
         self.colon_def(
@@ -749,7 +791,7 @@ impl ForthVM {
             "quit",
             &[
                 "r0",        // 0
-                "rsp!",      // 1
+                "rsp!",      // 1ptr
                 "interpret", // 2
                 "branch",    // 3
                 "-16",       // 4 ( 0 - 4 ) * 4
@@ -891,7 +933,7 @@ fn _key(vm: &mut VM) -> char {
         }
 
         fill_input_buffer(vm, &line);
-        return read_next_char(vm).unwrap() as char;
+        read_next_char(vm).unwrap() as char
     }
 }
 
@@ -917,14 +959,41 @@ fn _word(vm: &mut VM) -> (i32, i32) {
         len += 1;
         c = _key(vm);
     }
-    // print_in_stream(vm, buf_ptr, len);
+    // _tell(vm, buf_ptr, len);
     (len, buf_ptr)
+}
+
+fn tell(vm: &mut VM) {
+    let len = vm.pop_i32();
+    let buf_ptr = vm.pop_i32();
+    _tell(vm, buf_ptr, len);
+}
+
+fn _tell(vm: &VM, ptr: i32, n: i32) {
+    let mut s = String::new();
+
+    for i in 0..n {
+        s.push(vm.read_u8((ptr + i) as usize) as char);
+    }
+
+    print!("{s}");
 }
 
 fn read_char(vm: &mut VM) {
     let (_, buf_ptr) = _word(vm);
     let c = vm.read_u8(buf_ptr as usize);
     vm.push_i32(c as i32);
+}
+
+fn div_mod(vm: &mut VM) {
+    let b = vm.pop_i32();
+    let a = vm.pop_i32();
+
+    let q = a / b;
+    let r = a % b;
+
+    vm.push_i32(r);
+    vm.push_i32(q);
 }
 
 fn skip_white_space(vm: &mut VM) -> char {
