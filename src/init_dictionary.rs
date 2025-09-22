@@ -1,8 +1,11 @@
-use toyvm::{VM, opcode};
+use toyvm::{
+    VM,
+    opcode::{self, NEXT},
+};
 
 use crate::{
     ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN, align,
-    forthvm::{fill_input_buffer, read_next_char},
+    forthvm::{OVER, ROT, fill_input_buffer, read_next_char},
     input_stream::{in_stream_from_stdin, in_stream_is_terminal, in_stream_read_line},
     mmap,
 };
@@ -22,6 +25,7 @@ impl ForthVM {
         let docol = mmap::DOCOL.to_ne_bytes();
         let ic = mmap::IC.to_ne_bytes();
         let a0 = mmap::A0.to_ne_bytes();
+        let not_3 = (!3_i32).to_ne_bytes();
 
         self.builtin(
             "state",
@@ -136,17 +140,24 @@ impl ForthVM {
         self.builtin("2drop", &[opcode::DROP, opcode::DROP, opcode::NEXT]);
         self.builtin("swap", &[opcode::SWAP, opcode::NEXT]);
         self.builtin("dup", &[opcode::DUP, opcode::NEXT]);
-        self.builtin("?dup", &[
-            opcode::DUP,
-            opcode::JZI,    // 0
-            5,              // 1
-            0,              // 2
-            0,              // 3
-            0,              // 4
-            opcode::DUP,    // 5
-            opcode::NEXT,   // 6
-        ]);
-        //self.add_word_builtin(vm, "over", &[opcode::, opcode::NEXT]);
+        self.builtin("2dup", &[OVER, OVER, opcode::NEXT]);
+        self.builtin(
+            "?dup",
+            &[
+                opcode::DUP,
+                opcode::JZI,  // 0
+                5,            // 1
+                0,            // 2
+                0,            // 3
+                0,            // 4
+                opcode::DUP,  // 5
+                opcode::NEXT, // 6
+            ],
+        );
+        self.builtin("nip", &[opcode::SWAP, opcode::DROP, opcode::NEXT]);
+        self.builtin("over", &[OVER, opcode::NEXT]);
+        self.builtin("rot", &[ROT, opcode::NEXT]);
+        self.builtin("tuck", &[opcode::SWAP, OVER, NEXT]);
         self.builtin("+", &[opcode::ADD, opcode::NEXT]);
         self.builtin("1+", &[opcode::INC, opcode::NEXT]);
         self.builtin("1-", &[opcode::DEC, opcode::NEXT]);
@@ -183,16 +194,7 @@ impl ForthVM {
 
         self.builtin(
             "negate",
-            &[
-                opcode::I32_CONST,
-                0,
-                0,
-                0,
-                0,
-                opcode::SWAP,
-                opcode::SUB,
-                opcode::NEXT,
-            ],
+            &[opcode::ZERO, opcode::SWAP, opcode::SUB, opcode::NEXT],
         );
 
         self.builtin("bye", &[opcode::END]);
@@ -218,22 +220,22 @@ impl ForthVM {
                 ic[0],
                 ic[1],
                 ic[2],
-                ic[3],            
+                ic[3],
                 opcode::I32_LOAD,
-                opcode::DUP,      
-                opcode::I32_LOAD, 
-                opcode::SWAP,     
+                opcode::DUP,
+                opcode::I32_LOAD,
+                opcode::SWAP,
                 opcode::I32_CONST,
                 4,
                 0,
                 0,
-                0,           
-                opcode::ADD, 
+                0,
+                opcode::ADD,
                 opcode::I32_CONST,
                 ic[0],
                 ic[1],
                 ic[2],
-                ic[3],             
+                ic[3],
                 opcode::I32_STORE,
                 opcode::NEXT,
             ],
@@ -242,27 +244,50 @@ impl ForthVM {
             ic points to string.len
             ic + 4 points to first char
             ( -- c-addr len)
+             // (idx + 3) & !3
         */
 
         self.builtin(
             "litstring",
             &[
-                opcode::I32_CONST, ic[0],ic[1],ic[2],ic[3],            
-                opcode::I32_LOAD, 
-                opcode::DUP,      
-                opcode::I32_LOAD, 
-                opcode::SWAP,     
-                opcode::I32_CONST,
-                4,
-                0,
-                0,
-                0,           
-                opcode::ADD, 
                 opcode::I32_CONST,
                 ic[0],
                 ic[1],
                 ic[2],
-                ic[3],       
+                ic[3],
+                opcode::I32_LOAD, // ( ic )
+                opcode::DUP,      // ( ic ic )
+                opcode::DUP,      // ( ic ic ic )
+                opcode::I32_LOAD, // ( ic ic len )
+                opcode::SWAP,     // ( ic len ic)
+                opcode::I32_CONST,
+                4,
+                0,
+                0,
+                0,
+                opcode::ADD,
+                // opcode::I32_LOAD, // ( ic len c-addr )
+                opcode::SWAP, // ( ic c-addr len )
+                ROT,          // ( c-addr len ic )
+                OVER,         // ( c-addr len ic len )
+                opcode::ADD,  // ( c-addr len ic+len )
+                opcode::I32_CONST,
+                7,
+                0,
+                0,
+                0,
+                opcode::ADD, // ( c-addr len ic+len+3)
+                opcode::I32_CONST,
+                not_3[0],
+                not_3[1],
+                not_3[2],
+                not_3[3],
+                opcode::AND,
+                opcode::I32_CONST,
+                ic[0],
+                ic[1],
+                ic[2],
+                ic[3],
                 opcode::I32_STORE,
                 opcode::NEXT,
             ],
@@ -580,7 +605,6 @@ impl ForthVM {
 
         // (idx + 3) & !3
         let mwl = (MAX_WORD_LEN as i32).to_ne_bytes();
-        let not_3 = (!3_i32).to_ne_bytes();
         self.builtin(
             ">cfa",
             &[
@@ -696,12 +720,6 @@ impl ForthVM {
         self.vm_call("char", &read_char);
         self.vm_call("/mod", &div_mod);
 
-        // TODO: better way to do 2dup
-        self.colon_def(
-            "2dup",
-            &["dup", ">r", "swap", "dup", ">r", "swap", "r>", "r>", "exit"],
-        );
-
         self.colon_def("hide", &["word", "find", "hidden", "exit"]);
 
         self.colon_def(
@@ -717,7 +735,6 @@ impl ForthVM {
             &["lit", "exit", ",", "latest", "@", "hidden", "[", "exit"],
         );
 
-        // TODO: fix prompt
         self.colon_def(
             "interpret",
             &[
@@ -791,7 +808,7 @@ impl ForthVM {
             "quit",
             &[
                 "r0",        // 0
-                "rsp!",      // 1ptr
+                "rsp!",      // 1
                 "interpret", // 2
                 "branch",    // 3
                 "-16",       // 4 ( 0 - 4 ) * 4

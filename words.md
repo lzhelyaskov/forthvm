@@ -42,12 +42,14 @@ not all words are implemented yet!
 ### param stack
 * **dup** *( a -- a a )*
 * **2dup** *( a b -- a b a b )*
-* **dup?** *( a -- 0 | a a )* 
+* **?dup** *( a -- 0 | a a )* 
 * **swap** *( a b -- b a )*
 * **over** *( a b -- a b a )*
 * **rot** *( a b c -- b c a )*
 * **drop** *( a -- )*
-* **pick** *( n -- a )* copies nth stack item on top of the stack
+* **nip** *( a b -- b )*
+* **tuck** *( a b -- b a b )*
+* **pick** *( xn..x0 n -- xn..x0 xn )* copies nth stack item on top of the stack
 * **roll** *()*
 * **stack?** *( -- 1 | 0 )* returns true if stack underflow has occured
 * **depth** *( -- n )* 
@@ -73,10 +75,13 @@ not all words are implemented yet!
 * **?** *( addr -- )* print value addr is pointing to ( same as : @ . )
 * **.s** *( -- )* print param stack without destroying it
 * **.r** *( -- )* print return stack without destroying it
-* **emit** *( c -- )* print stack top as char and drop it 
+* **emit** *( c -- )* print stack top as char and drop it
+* **tell** *( c-addr n )* prints n chars form c-addr
+* **."** xxx" *( -- )* prints xxx until " 
 
 ### input
-* **key** *( -- c )* read single char at push it to stack
+* **key** *( -- c )* read single char from input stream and push it to stack
+* **word** *( -- c-addr n )* reads word from input stream 
 
 ### memory
 * **\!** *( a addr -- )* store a at addr
@@ -112,7 +117,7 @@ not all words are implemented yet!
 * **execute** *( xt -- )*
 
 ### dictionary
-* **current** *( -- addr )* address of last added word
+* **latest** *( -- addr )* address of last added word
 * **here** *( -- addr )* address of next free cell in dictionary
 * **>cfa** *( addr -- addr )* takes address of a word, returns code field address
 * **>dfa** *( addr -- addr )* returns data field address of a word

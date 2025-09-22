@@ -14,7 +14,7 @@ fn create_vm() -> ForthVM {
     vm.init_dictionary();
     vm
 }
-// + - * / mod
+
 #[test]
 fn test_arithmetic() {
     // TODO: abs
@@ -218,6 +218,21 @@ fn test_lit() {
 }
 
 #[test]
+fn test_litstring() {
+    let mut vm = create_vm();
+
+    let test_lit = vm.colon_def("test_lit", &["litstring", "4", "123", "bye"]);
+
+    vm.run_word(test_lit as usize);
+
+    let len = vm.pop_i32();
+    let c_addr = vm.pop_i32();
+    let xt = vm.cfa(test_lit);
+    assert_eq!(len, 4);
+    assert_eq!(c_addr, xt + 12);
+}
+
+#[test]
 fn test_branch() {
     let mut vm = create_vm();
 
@@ -281,10 +296,10 @@ fn test_param_stack() {
     let test_2drop = vm.colon_def("test_2drop", &["2drop", "bye"]);
     let test_qdup = vm.colon_def("test_qdup", &["?dup", "bye"]);
     let test_2dup = vm.colon_def("test_2dup", &["2dup", "bye"]);
-
-    // TODO: rot pick roll stack?
-    // let test_over = dict.add_col_word_ex(&mut vm, "test_over", &["over", "bye"]);
-    // let test_rot = dict.add_col_word_ex(&mut vm, "test_invert", &["rot", "bye"]);
+    let test_over = vm.colon_def("test_over", &["over", "bye"]);
+    let test_rot = vm.colon_def("test_rot", &["rot", "bye"]);
+    let test_nip = vm.colon_def("test_nip", &["nip", "bye"]);
+    let test_tuck = vm.colon_def("test_tuck", &["tuck", "bye"]);
 
     vm.push_i32(42);
 
@@ -337,7 +352,6 @@ fn test_param_stack() {
     assert_eq!(c, 66);
     assert_eq!(d, 55);
 
-
     vm.push_i32(7);
     vm.run_word(test_qdup as usize);
 
@@ -356,6 +370,57 @@ fn test_param_stack() {
 
     assert_eq!(a, 0);
     assert_eq!(b, 7);
+
+    vm.push_i32(1);
+    vm.push_i32(2);
+    vm.run_word(test_over as usize);
+
+    let a = vm.pop_i32();
+    let b = vm.pop_i32();
+    let c = vm.pop_i32();
+
+    assert_eq!(a, 1);
+    assert_eq!(b, 2);
+    assert_eq!(c, 1);
+
+    vm.push_i32(1);
+    vm.push_i32(2);
+    vm.push_i32(3);
+    // ( a b c -- b c a )
+    vm.run_word(test_rot as usize);
+
+    let a = vm.pop_i32();
+    let b = vm.pop_i32();
+    let c = vm.pop_i32();
+
+    assert_eq!(a, 1);
+    assert_eq!(b, 3);
+    assert_eq!(c, 2);
+
+    vm.push_i32(1);
+    vm.push_i32(2);
+    vm.push_i32(3);
+    vm.run_word(test_nip as usize);
+
+    let a = vm.pop_i32();
+    let b = vm.pop_i32();
+
+    assert_eq!(vm.pstack_depth(), 0);
+    assert_eq!(a, 3);
+    assert_eq!(b, 1);
+
+    // ( a b -- b a b )
+    vm.push_i32(1);
+    vm.push_i32(2);
+    vm.run_word(test_tuck as usize);
+
+    let a = vm.pop_i32();
+    let b = vm.pop_i32();
+    let c = vm.pop_i32();
+
+    assert_eq!(a, 2);
+    assert_eq!(b, 1);
+    assert_eq!(c, 2);
 }
 
 #[test]

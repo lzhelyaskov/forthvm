@@ -5,9 +5,12 @@ use crate::{COMPILING, INTERPRETING, LEN_MASK, MAX_WORD_LEN, docol, mmap};
 use toyvm::VM;
 use toyvm::opcode;
 
-// IC points to code_ptr of the  next word to execute.
-// jump to code_ptr, increase ic by 4 to point to the next word
+pub(crate) const OVER: u8 = opcode::NEXT - 1;
+pub(crate) const ROT: u8 = OVER - 1;
+
 fn next_handler(vm: &mut VM, ip: &mut usize, op: u8) -> bool {
+    // IC points to code_ptr of the  next word to execute.
+    // jump to code_ptr, increase ic by 4 to point to the next word
     if op == opcode::NEXT {
         let ic = vm.read_i32(mmap::IC);
         let code_ptr = vm.read_i32(ic as usize) as usize;
@@ -15,6 +18,23 @@ fn next_handler(vm: &mut VM, ip: &mut usize, op: u8) -> bool {
         vm.write_i32(ic + 4, mmap::IC);
         vm.write_i32(code_ptr as i32, mmap::A0);
 
+        true
+    } else if op == OVER {
+        // ( a b -- a b a )
+        let b = vm.pop_i32();
+        let a = vm.pop_i32();
+        vm.push_i32(a);
+        vm.push_i32(b);
+        vm.push_i32(a);
+        true
+    } else if op == ROT {
+        // ( a b c -- b c a )
+        let c = vm.pop_i32();
+        let b = vm.pop_i32();
+        let a = vm.pop_i32();
+        vm.push_i32(b);
+        vm.push_i32(c);
+        vm.push_i32(a);
         true
     } else {
         false
