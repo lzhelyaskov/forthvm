@@ -10,6 +10,8 @@ pub const CELL: i32 = 4;
 pub use forthvm::{ForthVM, VmConfig};
 pub use input_stream::*;
 
+use crate::forthvm::NEXT;
+
 /// memory map
 /// where is stuff stored in memory
 pub mod mmap {

@@ -1,3 +1,4 @@
+use crate::forthvm::NEXT;
 use crate::mmap::{self, STATE};
 use crate::{ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN, VmConfig, align};
 use toyvm::opcode;
@@ -86,9 +87,9 @@ fn test_write_col_def() {
     };
     let mut vm = ForthVM::from_config(conf);
 
-    let drop = vm.builtin("drop", &[opcode::DROP, opcode::NEXT]);
-    let swap = vm.builtin("swap", &[opcode::SWAP, opcode::NEXT]);
-    let dup = vm.builtin("dup", &[opcode::DUP, opcode::NEXT]);
+    let drop = vm.builtin("drop", &[opcode::DROP, NEXT]);
+    let swap = vm.builtin("swap", &[opcode::SWAP, NEXT]);
+    let dup = vm.builtin("dup", &[opcode::DUP, NEXT]);
     let bye = vm.builtin("bye", &[opcode::END]);
 
     let here = vm.here();
@@ -124,7 +125,7 @@ fn test_builtin() {
             state[1],
             state[2],
             state[3],
-            opcode::NEXT,
+            NEXT,
         ],
     );
 
@@ -164,13 +165,13 @@ fn test_find() {
             state[1],
             state[2],
             state[3],
-            opcode::NEXT,
+            NEXT,
         ],
     );
 
-    vm.builtin("drop", &[opcode::DROP, opcode::NEXT]);
-    vm.builtin("swap", &[opcode::SWAP, opcode::NEXT]);
-    vm.builtin("dup", &[opcode::DUP, opcode::NEXT]);
+    vm.builtin("drop", &[opcode::DROP, NEXT]);
+    vm.builtin("swap", &[opcode::SWAP, NEXT]);
+    vm.builtin("dup", &[opcode::DUP, NEXT]);
     vm.builtin("bye", &[opcode::END]);
 
     let idx = vm.find("swap");
@@ -192,9 +193,9 @@ fn test_colon_def() {
     };
     let mut vm = ForthVM::from_config(conf);
 
-    vm.builtin("drop", &[opcode::DROP, opcode::NEXT]);
-    vm.builtin("swap", &[opcode::SWAP, opcode::NEXT]);
-    vm.builtin("dup", &[opcode::DUP, opcode::NEXT]);
+    vm.builtin("drop", &[opcode::DROP, NEXT]);
+    vm.builtin("swap", &[opcode::SWAP, NEXT]);
+    vm.builtin("dup", &[opcode::DUP, NEXT]);
     let bye_idx = vm.builtin("bye", &[opcode::END]);
     assert_eq!(bye_idx, vm.latest(), "bye_idx is latest");
     let here = vm.here();

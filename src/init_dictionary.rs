@@ -1,11 +1,8 @@
-use toyvm::{
-    VM,
-    opcode::{self, NEXT},
-};
+use toyvm::{VM, opcode};
 
 use crate::{
     ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN, align,
-    forthvm::{OVER, ROT, fill_input_buffer, read_next_char},
+    forthvm::{DIV_MOD, NEXT, OVER, ROT, fill_input_buffer, read_next_char},
     input_stream::{in_stream_from_stdin, in_stream_is_terminal, in_stream_read_line},
     mmap,
 };
@@ -35,19 +32,12 @@ impl ForthVM {
                 state[1],
                 state[2],
                 state[3],
-                opcode::NEXT,
+                NEXT,
             ],
         );
         self.builtin(
             "here",
-            &[
-                opcode::I32_CONST,
-                here[0],
-                here[1],
-                here[2],
-                here[3],
-                opcode::NEXT,
-            ],
+            &[opcode::I32_CONST, here[0], here[1], here[2], here[3], NEXT],
         );
 
         self.builtin(
@@ -58,53 +48,25 @@ impl ForthVM {
                 latest[1],
                 latest[2],
                 latest[3],
-                opcode::NEXT,
+                NEXT,
             ],
         );
         self.builtin(
             "dsp",
-            &[
-                opcode::I32_CONST,
-                dsp[0],
-                dsp[1],
-                dsp[2],
-                dsp[3],
-                opcode::NEXT,
-            ],
+            &[opcode::I32_CONST, dsp[0], dsp[1], dsp[2], dsp[3], NEXT],
         );
 
         self.builtin(
             "rsp",
-            &[
-                opcode::I32_CONST,
-                rsp[0],
-                rsp[1],
-                rsp[2],
-                rsp[3],
-                opcode::NEXT,
-            ],
+            &[opcode::I32_CONST, rsp[0], rsp[1], rsp[2], rsp[3], NEXT],
         );
 
-        self.builtin(
-            "s0",
-            &[opcode::I32_CONST, s0[0], s0[1], s0[2], s0[3], opcode::NEXT],
-        );
-
-        self.builtin(
-            "r0",
-            &[opcode::I32_CONST, r0[0], r0[1], r0[2], r0[3], opcode::NEXT],
-        );
+        self.builtin("s0", &[opcode::I32_CONST, s0[0], s0[1], s0[2], s0[3], NEXT]);
+        self.builtin("r0", &[opcode::I32_CONST, r0[0], r0[1], r0[2], r0[3], NEXT]);
 
         self.builtin(
             "base",
-            &[
-                opcode::I32_CONST,
-                base[0],
-                base[1],
-                base[2],
-                base[3],
-                opcode::NEXT,
-            ],
+            &[opcode::I32_CONST, base[0], base[1], base[2], base[3], NEXT],
         );
 
         self.builtin(
@@ -115,87 +77,87 @@ impl ForthVM {
                 docol[1],
                 docol[2],
                 docol[3],
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
-        self.builtin(
-            "F_IMMED",
-            &[opcode::I32_CONST, IMMEDIATE, 0, 0, 0, opcode::NEXT],
-        );
-        self.builtin(
-            "F_HIDDEN",
-            &[opcode::I32_CONST, HIDDEN, 0, 0, 0, opcode::NEXT],
-        );
-        self.builtin(
-            "F_LENMASK",
-            &[opcode::I32_CONST, LEN_MASK, 0, 0, 0, opcode::NEXT],
-        );
+        self.builtin("F_IMMED", &[opcode::I32_CONST, IMMEDIATE, 0, 0, 0, NEXT]);
+        self.builtin("F_HIDDEN", &[opcode::I32_CONST, HIDDEN, 0, 0, 0, NEXT]);
+        self.builtin("F_LENMASK", &[opcode::I32_CONST, LEN_MASK, 0, 0, 0, NEXT]);
 
-        self.builtin("true", &[opcode::I32_CONST, 1, 0, 0, 0, opcode::NEXT]);
-        self.builtin("false", &[opcode::I32_CONST, 0, 0, 0, 0, opcode::NEXT]);
-        self.builtin("not", &[opcode::EQZ, opcode::NEXT]);
+        self.builtin("true", &[opcode::I32_CONST, 1, 0, 0, 0, NEXT]);
+        self.builtin("false", &[opcode::I32_CONST, 0, 0, 0, 0, NEXT]);
+        self.builtin("not", &[opcode::EQZ, NEXT]);
 
-        self.builtin("drop", &[opcode::DROP, opcode::NEXT]);
-        self.builtin("2drop", &[opcode::DROP, opcode::DROP, opcode::NEXT]);
-        self.builtin("swap", &[opcode::SWAP, opcode::NEXT]);
-        self.builtin("dup", &[opcode::DUP, opcode::NEXT]);
-        self.builtin("2dup", &[OVER, OVER, opcode::NEXT]);
+        self.builtin("drop", &[opcode::DROP, NEXT]);
+        self.builtin("2drop", &[opcode::DROP, opcode::DROP, NEXT]);
+        self.builtin("swap", &[opcode::SWAP, NEXT]);
+        self.builtin("dup", &[opcode::DUP, NEXT]);
+        self.builtin("2dup", &[OVER, OVER, NEXT]);
         self.builtin(
             "?dup",
             &[
                 opcode::DUP,
-                opcode::JZI,  // 0
-                5,            // 1
-                0,            // 2
-                0,            // 3
-                0,            // 4
-                opcode::DUP,  // 5
-                opcode::NEXT, // 6
+                opcode::JZI, // 0
+                5,           // 1
+                0,           // 2
+                0,           // 3
+                0,           // 4
+                opcode::DUP, // 5
+                NEXT,        // 6
             ],
         );
-        self.builtin("nip", &[opcode::SWAP, opcode::DROP, opcode::NEXT]);
-        self.builtin("over", &[OVER, opcode::NEXT]);
-        self.builtin("rot", &[ROT, opcode::NEXT]);
+        self.builtin("nip", &[opcode::SWAP, opcode::DROP, NEXT]);
+        self.builtin("over", &[OVER, NEXT]);
+        self.builtin("rot", &[ROT, NEXT]);
         self.builtin("tuck", &[opcode::SWAP, OVER, NEXT]);
-        self.builtin("+", &[opcode::ADD, opcode::NEXT]);
-        self.builtin("1+", &[opcode::INC, opcode::NEXT]);
-        self.builtin("1-", &[opcode::DEC, opcode::NEXT]);
-        self.builtin(
-            "4+",
-            &[opcode::I32_CONST, 4, 0, 0, 0, opcode::ADD, opcode::NEXT],
-        );
-        self.builtin(
-            "4-",
-            &[opcode::I32_CONST, 4, 0, 0, 0, opcode::SUB, opcode::NEXT],
-        );
+        self.builtin("+", &[opcode::ADD, NEXT]);
+        self.builtin("1+", &[opcode::INC, NEXT]);
+        self.builtin("1-", &[opcode::DEC, NEXT]);
+        self.builtin("4+", &[opcode::I32_CONST, 4, 0, 0, 0, opcode::ADD, NEXT]);
+        self.builtin("4-", &[opcode::I32_CONST, 4, 0, 0, 0, opcode::SUB, NEXT]);
 
-        self.builtin("-", &[opcode::SUB, opcode::NEXT]);
-        self.builtin("*", &[opcode::MUL, opcode::NEXT]);
-        self.builtin("/", &[opcode::DIV_S, opcode::NEXT]);
-        self.builtin("mod", &[opcode::MOD_S, opcode::NEXT]);
-        self.builtin("=", &[opcode::EQ, opcode::NEXT]);
-        self.builtin("0=", &[opcode::EQZ, opcode::NEXT]);
-        self.builtin("<>", &[opcode::EQ, opcode::EQZ, opcode::NEXT]);
-        self.builtin("<", &[opcode::LT_S, opcode::NEXT]);
-        self.builtin(">", &[opcode::GT_S, opcode::NEXT]);
-        self.builtin("<=", &[opcode::LE_S, opcode::NEXT]);
-        self.builtin(">=", &[opcode::GE_S, opcode::NEXT]);
-        self.builtin("min", &[opcode::MIN, opcode::NEXT]);
-        self.builtin("max", &[opcode::MAX, opcode::NEXT]);
-        self.builtin("and", &[opcode::AND, opcode::NEXT]);
-        self.builtin("or", &[opcode::OR, opcode::NEXT]);
-        self.builtin("xor", &[opcode::XOR, opcode::NEXT]);
-        self.builtin("invert", &[opcode::NOT, opcode::NEXT]);
-        self.builtin("!", &[opcode::I32_STORE, opcode::NEXT]);
-        self.builtin("@", &[opcode::I32_LOAD, opcode::NEXT]);
-        self.builtin("c!", &[opcode::I32_STORE_8, opcode::NEXT]);
-        self.builtin("c@", &[opcode::I32_LOAD_8, opcode::NEXT]);
-
+        self.builtin("-", &[opcode::SUB, NEXT]);
+        self.builtin("*", &[opcode::MUL, NEXT]);
+        self.builtin("/", &[opcode::DIV_S, NEXT]);
+        self.builtin("mod", &[opcode::MOD_S, NEXT]);
+        self.builtin("/mod", &[DIV_MOD, NEXT]);
+        self.builtin("=", &[opcode::EQ, NEXT]);
+        self.builtin("0=", &[opcode::EQZ, NEXT]);
+        self.builtin("0<", &[opcode::ZERO, opcode::LT_S, NEXT]);
+        self.builtin("0>", &[opcode::ZERO, opcode::GT_S, NEXT]);
+        self.builtin("<>", &[opcode::EQ, opcode::EQZ, NEXT]);
+        self.builtin("<", &[opcode::LT_S, NEXT]);
+        self.builtin(">", &[opcode::GT_S, NEXT]);
+        self.builtin("u<", &[opcode::LT_U, NEXT]);
+        self.builtin("u>", &[opcode::GT_U, NEXT]);
+        self.builtin("<=", &[opcode::LE_S, NEXT]);
+        self.builtin(">=", &[opcode::GE_S, NEXT]);
+        self.builtin("min", &[opcode::MIN, NEXT]);
+        self.builtin("max", &[opcode::MAX, NEXT]);
+        self.builtin("and", &[opcode::AND, NEXT]);
+        self.builtin("or", &[opcode::OR, NEXT]);
+        self.builtin("xor", &[opcode::XOR, NEXT]);
+        self.builtin("invert", &[opcode::NOT, NEXT]);
+        self.builtin("!", &[opcode::I32_STORE, NEXT]);
+        // ( n addr -- )
         self.builtin(
-            "negate",
-            &[opcode::ZERO, opcode::SWAP, opcode::SUB, opcode::NEXT],
+            "+!",
+            &[
+                opcode::DUP,       // ( n addr addr )
+                opcode::I32_LOAD,  // ( n addr value )
+                ROT,               // ( addr value n )
+                opcode::ADD,       // ( addr value )
+                opcode::SWAP,      // ( value addr )
+                opcode::I32_STORE, // ( )
+                NEXT,
+            ],
         );
+        self.builtin("@", &[opcode::I32_LOAD, NEXT]);
+        self.builtin("c!", &[opcode::I32_STORE_8, NEXT]);
+        self.builtin("c@", &[opcode::I32_LOAD_8, NEXT]);
+
+        self.builtin("negate", &[opcode::ZERO, opcode::SWAP, opcode::SUB, NEXT]);
 
         self.builtin("bye", &[opcode::END]);
         self.builtin(
@@ -237,7 +199,7 @@ impl ForthVM {
                 ic[2],
                 ic[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
         /*
@@ -289,7 +251,7 @@ impl ForthVM {
                 ic[2],
                 ic[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -322,7 +284,7 @@ impl ForthVM {
                 ic[2],
                 ic[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -351,7 +313,7 @@ impl ForthVM {
                 opcode::SUB,
                 opcode::SWAP,
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -379,7 +341,7 @@ impl ForthVM {
                 rsp[2],
                 rsp[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
         self.builtin(
@@ -400,7 +362,7 @@ impl ForthVM {
                 opcode::ADD,
                 opcode::SWAP,
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
         self.builtin_ex(
@@ -413,7 +375,7 @@ impl ForthVM {
                 rsp[2],
                 rsp[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -427,7 +389,7 @@ impl ForthVM {
                 rsp[2],
                 rsp[3],
                 opcode::I32_LOAD,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -442,7 +404,7 @@ impl ForthVM {
                 dsp[2],
                 dsp[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -456,21 +418,10 @@ impl ForthVM {
                 dsp[2],
                 dsp[3],
                 opcode::I32_LOAD,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
-        /*
-            const ic    [ ic ]
-            dup         [ ic ic ]
-            load        [ ic *ic ]
-            dup         [ ic *ic *ic]
-            load        [ ic *ic offset ]
-            add         [ ic (*ic offset) ]
-            swap        [ (*ic offset) ic ]
-            store       []
-            next
-        */
         let branch_adr = self.builtin(
             "branch",
             &[
@@ -486,23 +437,12 @@ impl ForthVM {
                 opcode::ADD,
                 opcode::SWAP,
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
         let branch_code = (self.cfa(branch_adr) + 4).to_ne_bytes();
 
-        /*
-            brz code_of_branch
-            const IC    [ ic ]
-            dup         [ ic ic ]
-            load        [ ic *ic ]
-            const 4     [ ic *ic 4 ]
-            add         [ ic (*ic + 4) ]
-            swap        [ (*ic + 4) ic ]
-            store       []
-            next
-        */
         self.builtin(
             "0branch",
             &[
@@ -526,23 +466,10 @@ impl ForthVM {
                 opcode::ADD,
                 opcode::SWAP,
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
-        /*
-            const latest    [ latest ]
-            load            [ adr ]
-            const 4         [ adr 4 ]
-            add             [ len_adr ]
-            dup             [ len_adr  len_adr]
-            i8.load         [ len_adr len ]
-            const mask      [ len_adr len mask ]
-            xor             [ len_adr new_len ]
-            swap            [ new_len len_adr ]
-            i8.store        []
-            next            []
-        */
         self.builtin_ex(
             "immediate",
             IMMEDIATE,
@@ -569,7 +496,7 @@ impl ForthVM {
                 opcode::XOR,
                 opcode::SWAP,
                 opcode::I32_STORE_8,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -599,7 +526,7 @@ impl ForthVM {
                 ic[2],
                 ic[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -641,7 +568,7 @@ impl ForthVM {
                 not_3[2],
                 not_3[3],
                 opcode::AND,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -660,7 +587,7 @@ impl ForthVM {
                 state[2],
                 state[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -679,7 +606,7 @@ impl ForthVM {
                 state[2],
                 state[3],
                 opcode::I32_STORE,
-                opcode::NEXT,
+                NEXT,
             ],
         );
         self.builtin_ex(
@@ -702,7 +629,7 @@ impl ForthVM {
                 opcode::XOR,
                 opcode::SWAP,
                 opcode::I32_STORE_8,
-                opcode::NEXT,
+                NEXT,
             ],
         );
 
@@ -718,7 +645,7 @@ impl ForthVM {
         self.vm_call(",", &comma);
         self.vm_call("create", &create);
         self.vm_call("char", &read_char);
-        self.vm_call("/mod", &div_mod);
+        // self.vm_call("/mod", &div_mod);
 
         self.colon_def("hide", &["word", "find", "hidden", "exit"]);
 
@@ -1000,17 +927,6 @@ fn read_char(vm: &mut VM) {
     let (_, buf_ptr) = _word(vm);
     let c = vm.read_u8(buf_ptr as usize);
     vm.push_i32(c as i32);
-}
-
-fn div_mod(vm: &mut VM) {
-    let b = vm.pop_i32();
-    let a = vm.pop_i32();
-
-    let q = a / b;
-    let r = a % b;
-
-    vm.push_i32(r);
-    vm.push_i32(q);
 }
 
 fn skip_white_space(vm: &mut VM) -> char {

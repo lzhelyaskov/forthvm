@@ -5,40 +5,53 @@ use crate::{COMPILING, INTERPRETING, LEN_MASK, MAX_WORD_LEN, docol, mmap};
 use toyvm::VM;
 use toyvm::opcode;
 
-pub(crate) const OVER: u8 = opcode::NEXT - 1;
+pub(crate) const NEXT: u8 = 0xff;
+pub(crate) const OVER: u8 = NEXT - 1;
 pub(crate) const ROT: u8 = OVER - 1;
+pub(crate) const DIV_MOD: u8 = ROT - 1;
 
-fn next_handler(vm: &mut VM, ip: &mut usize, op: u8) -> bool {
-    // IC points to code_ptr of the  next word to execute.
-    // jump to code_ptr, increase ic by 4 to point to the next word
-    if op == opcode::NEXT {
-        let ic = vm.read_i32(mmap::IC);
-        let code_ptr = vm.read_i32(ic as usize) as usize;
-        *ip = vm.read_i32(code_ptr) as usize;
-        vm.write_i32(ic + 4, mmap::IC);
-        vm.write_i32(code_ptr as i32, mmap::A0);
+fn forth_opcodes(vm: &mut VM, ip: &mut usize, op: u8) -> bool {
+    match op {
+        NEXT => {
+            // IC points to code_ptr of the  next word to execute.
+            // jump to code_ptr, increase ic by 4 to point to the next word
 
-        true
-    } else if op == OVER {
-        // ( a b -- a b a )
-        let b = vm.pop_i32();
-        let a = vm.pop_i32();
-        vm.push_i32(a);
-        vm.push_i32(b);
-        vm.push_i32(a);
-        true
-    } else if op == ROT {
-        // ( a b c -- b c a )
-        let c = vm.pop_i32();
-        let b = vm.pop_i32();
-        let a = vm.pop_i32();
-        vm.push_i32(b);
-        vm.push_i32(c);
-        vm.push_i32(a);
-        true
-    } else {
-        false
+            let ic = vm.read_i32(mmap::IC);
+            let code_ptr = vm.read_i32(ic as usize) as usize;
+            *ip = vm.read_i32(code_ptr) as usize;
+            vm.write_i32(ic + 4, mmap::IC);
+            vm.write_i32(code_ptr as i32, mmap::A0);
+        }
+        DIV_MOD => {
+            let b = vm.pop_i32();
+            let a = vm.pop_i32();
+
+            let q = a / b;
+            let r = a % b;
+
+            vm.push_i32(r);
+            vm.push_i32(q);
+        }
+        OVER => {
+            // ( a b -- a b a )
+            let b = vm.pop_i32();
+            let a = vm.pop_i32();
+            vm.push_i32(a);
+            vm.push_i32(b);
+            vm.push_i32(a);
+        }
+        ROT => {
+            // ( a b c -- b c a )
+            let c = vm.pop_i32();
+            let b = vm.pop_i32();
+            let a = vm.pop_i32();
+            vm.push_i32(b);
+            vm.push_i32(c);
+            vm.push_i32(a);
+        }
+        _ => return false,
     }
+    true
 }
 
 pub struct VmConfig {
@@ -85,11 +98,11 @@ impl ForthVM {
         vm.write_i32(lstack_top as i32, mmap::INPUT_BUFFER);
         vm.write_i32(lstack_top as i32, mmap::INPUT_BUFFER_IDX);
 
-        vm.write_u8(opcode::NEXT, mmap::COLD_START);
+        vm.write_u8(NEXT, mmap::COLD_START);
 
         vm.write(mmap::DOCOL, &docol());
 
-        vm.add_unknown_op_handler(&next_handler);
+        vm.add_unknown_op_handler(&forth_opcodes);
         ForthVM {
             vm,
             vocabulary: HashMap::new(),
@@ -259,7 +272,7 @@ impl ForthVM {
                 bytes[2],
                 bytes[3],
                 opcode::CALL_VM,
-                opcode::NEXT,
+                NEXT,
             ],
         );
         (fn_idx as i32, word_adr)

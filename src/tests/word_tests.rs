@@ -18,7 +18,6 @@ fn create_vm() -> ForthVM {
 #[test]
 fn test_arithmetic() {
     // TODO: abs
-
     let mut vm = create_vm();
 
     let test_add = vm.colon_def("test_add", &["+", "bye"]);
@@ -164,6 +163,18 @@ fn test_arithmetic() {
 }
 
 #[test]
+fn test_add_store() {
+    let mut vm = create_vm();
+
+    let test_add_store = vm.colon_def("test_add_store", &["base", "+!", "bye"]);
+
+    vm.push_i32(16);
+    vm.run_word(test_add_store as usize);
+    let result = vm.read_i32(mmap::BASE as i32);
+    assert_eq!(result, 26);
+}
+
+#[test]
 fn test_logic() {
     // and or xor invert
     let mut vm = create_vm();
@@ -222,6 +233,7 @@ fn test_litstring() {
     let mut vm = create_vm();
 
     let test_lit = vm.colon_def("test_lit", &["litstring", "4", "123", "bye"]);
+    // let bye_idx = vm.find("bye").unwrap();
 
     vm.run_word(test_lit as usize);
 
@@ -451,6 +463,8 @@ fn test_comparison() {
 
     let test_eq = vm.colon_def("test_eq", &["=", "bye"]);
     let test_eqz = vm.colon_def("test_eqz", &["0=", "bye"]);
+    let test_ltz = vm.colon_def("test_ltz", &["0<", "bye"]);
+    let test_gtz = vm.colon_def("test_gtz", &["0>", "bye"]);
     let test_gt = vm.colon_def("test_gt", &[">", "bye"]);
     let test_lt = vm.colon_def("test_lt", &["<", "bye"]);
     let test_ge = vm.colon_def("test_ge", &[">=", "bye"]);
@@ -492,13 +506,43 @@ fn test_comparison() {
     assert_eq!(value, TRUE, "0= (eqz)");
 
     vm.push_i32(69);
+    vm.run_word(test_ltz as usize);
+    let value = vm.pop_i32();
+    assert_eq!(value, FALSE, "0< (ltz)");
+
+    vm.push_i32(0);
+    vm.run_word(test_ltz as usize);
+    let value = vm.pop_i32();
+    assert_eq!(value, FALSE, "0< (ltz)");
+
+    vm.push_i32(-1);
+    vm.run_word(test_ltz as usize);
+    let value = vm.pop_i32();
+    assert_eq!(value, TRUE, "0< (ltz)");
+
+    vm.push_i32(69);
+    vm.run_word(test_gtz as usize);
+    let value = vm.pop_i32();
+    assert_eq!(value, TRUE, "0> (gtz)");
+
+    vm.push_i32(0);
+    vm.run_word(test_gtz as usize);
+    let value = vm.pop_i32();
+    assert_eq!(value, FALSE, "0> (gtz)");
+
+    vm.push_i32(-1);
+    vm.run_word(test_gtz as usize);
+    let value = vm.pop_i32();
+    assert_eq!(value, FALSE, "0> (gtz)");
+
     vm.push_i32(42);
+    vm.push_i32(69);
     vm.run_word(test_gt as usize);
     let value = vm.pop_i32();
     assert_eq!(value, FALSE, "> (gt) 1");
 
-    vm.push_i32(42);
     vm.push_i32(69);
+    vm.push_i32(42);
     vm.run_word(test_gt as usize);
     let value = vm.pop_i32();
     assert_eq!(value, TRUE, "> (gt) 2");
@@ -515,26 +559,26 @@ fn test_comparison() {
     let value = vm.pop_i32();
     assert_eq!(value, FALSE, "< (lt) 1");
 
-    vm.push_i32(69);
     vm.push_i32(42);
+    vm.push_i32(69);
     vm.run_word(test_lt as usize);
     let value = vm.pop_i32();
     assert_eq!(value, TRUE, "< (lt) 2");
 
-    vm.push_i32(42);
     vm.push_i32(69);
+    vm.push_i32(42);
     vm.run_word(test_lt as usize);
     let value = vm.pop_i32();
     assert_eq!(value, FALSE, "< (lt) 3");
 
-    vm.push_i32(69);
     vm.push_i32(42);
+    vm.push_i32(69);
     vm.run_word(test_ge as usize);
     let value = vm.pop_i32();
     assert_eq!(value, FALSE, ">= (ge) 1");
 
-    vm.push_i32(42);
     vm.push_i32(69);
+    vm.push_i32(42);
     vm.run_word(test_ge as usize);
     let value = vm.pop_i32();
     assert_eq!(value, TRUE, ">= (ge) 2");
@@ -551,14 +595,14 @@ fn test_comparison() {
     let value = vm.pop_i32();
     assert_eq!(value, TRUE, "< (le) 1");
 
-    vm.push_i32(69);
     vm.push_i32(42);
+    vm.push_i32(69);
     vm.run_word(test_le as usize);
     let value = vm.pop_i32();
     assert_eq!(value, TRUE, "< (le) 2");
 
-    vm.push_i32(42);
     vm.push_i32(69);
+    vm.push_i32(42);
     vm.run_word(test_le as usize);
     let value = vm.pop_i32();
     assert_eq!(value, FALSE, "< (le) 3");
