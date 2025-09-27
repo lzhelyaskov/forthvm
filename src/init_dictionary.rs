@@ -109,7 +109,11 @@ impl ForthVM {
         );
         self.builtin("nip", &[opcode::SWAP, opcode::DROP, NEXT]);
         self.builtin("over", &[OVER, NEXT]);
+        // ( a b c -- b c a )
         self.builtin("rot", &[ROT, NEXT]);
+
+        // ( a b c -- c a b)
+        self.builtin("-rot", &[ROT, ROT, NEXT]);
         self.builtin("tuck", &[opcode::SWAP, OVER, NEXT]);
         self.builtin("+", &[opcode::ADD, NEXT]);
         self.builtin("1+", &[opcode::INC, NEXT]);
@@ -645,8 +649,8 @@ impl ForthVM {
         self.vm_call(",", &comma);
         self.vm_call("create", &create);
         self.vm_call("char", &read_char);
-        // self.vm_call("/mod", &div_mod);
 
+        self.colon_def(">dfa", &[">cfa", "4+", "exit"]);
         self.colon_def("hide", &["word", "find", "hidden", "exit"]);
 
         self.colon_def(

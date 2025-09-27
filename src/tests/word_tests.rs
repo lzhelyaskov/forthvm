@@ -310,6 +310,7 @@ fn test_param_stack() {
     let test_2dup = vm.colon_def("test_2dup", &["2dup", "bye"]);
     let test_over = vm.colon_def("test_over", &["over", "bye"]);
     let test_rot = vm.colon_def("test_rot", &["rot", "bye"]);
+    let test_mrot = vm.colon_def("test_mrot", &["-rot", "bye"]);
     let test_nip = vm.colon_def("test_nip", &["nip", "bye"]);
     let test_tuck = vm.colon_def("test_tuck", &["tuck", "bye"]);
 
@@ -408,7 +409,21 @@ fn test_param_stack() {
     assert_eq!(a, 1);
     assert_eq!(b, 3);
     assert_eq!(c, 2);
+    //////////////////
+    vm.push_i32(1);
+    vm.push_i32(2);
+    vm.push_i32(3);
+    // ( a b c -- c a b )
+    vm.run_word(test_mrot as usize);
 
+    let a = vm.pop_i32();
+    let b = vm.pop_i32();
+    let c = vm.pop_i32();
+
+    assert_eq!(a, 2);
+    assert_eq!(b, 1);
+    assert_eq!(c, 3);
+    //////////////////
     vm.push_i32(1);
     vm.push_i32(2);
     vm.push_i32(3);
