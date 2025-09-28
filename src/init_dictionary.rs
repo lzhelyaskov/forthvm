@@ -745,6 +745,37 @@ impl ForthVM {
                 "-16",       // 4 ( 0 - 4 ) * 4
             ],
         );
+
+        #[cfg(feature = "fileio")]
+        self.init_fileio_words();
+    }
+
+    #[cfg(feature = "fileio")]
+    fn init_fileio_words(&mut self) {
+        let ro = fileio::F_READ.to_ne_bytes();
+        let wo = fileio::F_WRITE.to_ne_bytes();
+        let rw = (fileio::F_READ | fileio::F_WRITE).to_ne_bytes();
+        self.builtin(
+            "r/o",
+            &[opcode::I32_CONST, ro[0], ro[1], ro[2], ro[3], NEXT],
+        );
+        self.builtin(
+            "w/o",
+            &[opcode::I32_CONST, wo[0], wo[1], wo[2], wo[3], NEXT],
+        );
+        self.builtin(
+            "r/w",
+            &[opcode::I32_CONST, rw[0], rw[1], rw[2], rw[3], NEXT],
+        );
+
+        self.vm_call("include", &fileio::include);
+        self.vm_call("included", &fileio::included);
+
+        self.vm_call("file-open", &fileio::file_open);
+        self.vm_call("file-create", &fileio::file_create);
+        self.vm_call("file-close", &fileio::file_close);
+        self.vm_call("file-read", &fileio::file_read);
+        self.vm_call("file-write", &fileio::file_write);
     }
 }
 
@@ -917,13 +948,8 @@ fn tell(vm: &mut VM) {
     _tell(vm, buf_ptr, len);
 }
 
-fn _tell(vm: &VM, ptr: i32, n: i32) {
-    let mut s = String::new();
-
-    for i in 0..n {
-        s.push(vm.read_u8((ptr + i) as usize) as char);
-    }
-
+fn _tell(vm: &VM, ptr: i32, len: i32) {
+    let s = make_string(vm, len, ptr);
     print!("{s}");
 }
 
@@ -947,6 +973,141 @@ fn skip_white_space(vm: &mut VM) -> char {
             }
         } else {
             break c;
+        }
+    }
+}
+
+fn make_string(vm: &VM, len: i32, ptr: i32) -> String {
+    let mut s = String::new();
+
+    for i in 0..len {
+        let c = vm.read_u8((ptr + i) as usize) as char;
+        s.push(c);
+    }
+
+    s
+}
+
+#[cfg(feature = "fileio")]
+mod fileio {
+    use std::{
+        fs::{File, OpenOptions},
+        io::{Read, Write},
+        os::fd::{FromRawFd, IntoRawFd},
+    };
+
+    use toyvm::VM;
+
+    use crate::{
+        in_stream_from_file,
+        init_dictionary::{_word, make_string},
+    };
+
+    pub(crate) const F_READ: i32 = 1;
+    pub(crate) const F_WRITE: i32 = 2;
+
+    pub(crate) fn include(vm: &mut VM) {
+        let (len, ptr) = _word(vm);
+        _included(vm, len, ptr);
+    }
+
+    pub(crate) fn included(vm: &mut VM) {
+        let len = vm.pop_i32();
+        let ptr = vm.pop_i32();
+        _included(vm, len, ptr);
+    }
+
+    fn _included(vm: &mut VM, len: i32, ptr: i32) {
+        let path = make_string(vm, len, ptr);
+
+        match File::open(&path) {
+            Ok(file) => {
+                in_stream_from_file(file);
+            }
+            Err(err) => {
+                println!("could not open '{path}'\n {:?}", err);
+            }
+        }
+    }
+
+    pub(crate) fn file_open(vm: &mut VM) {
+        _file_open(vm, false);
+    }
+    pub(crate) fn file_create(vm: &mut VM) {
+        _file_open(vm, true);
+    }
+
+    fn _file_open(vm: &mut VM, create: bool) {
+        let flags = vm.pop_i32();
+        let len = vm.pop_i32();
+        let ptr = vm.pop_i32();
+        let path = make_string(vm, len, ptr);
+        let result = OpenOptions::new()
+            .read(flags & F_READ == F_READ)
+            .write(flags & F_WRITE == F_WRITE)
+            .create(create)
+            .open(path);
+
+        match result {
+            Ok(file) => {
+                let fd = file.into_raw_fd();
+                vm.push_i32(fd);
+                vm.push_i32(0); // error code 0 => success
+            }
+            Err(err) => {
+                vm.push_i32(0); // no fd
+                vm.push_i32(err.kind() as i32 + 1); // signal error
+            }
+        }
+    }
+
+    pub(crate) fn file_close(vm: &mut VM) {
+        let fd = vm.pop_i32();
+        let file = unsafe { File::from_raw_fd(fd) };
+        drop(file);
+    }
+
+    pub(crate) fn file_read(vm: &mut VM) {
+        let fd = vm.pop_i32();
+        let len = vm.pop_i32() as usize;
+        let ptr = vm.pop_i32() as usize;
+        let mut file = unsafe { File::from_raw_fd(fd) };
+        let mem = vm.memory_ref_mut();
+        let result = file.read(&mut mem[ptr..ptr + len]);
+
+        std::mem::forget(file);
+
+        match result {
+            Ok(u) => {
+                vm.push_i32(u as i32);
+                vm.push_i32(0);
+            }
+            Err(err) => {
+                vm.push_i32(0);
+                vm.push_i32(err.kind() as i32 + 1); // signal error
+            }
+        }
+    }
+
+    pub(crate) fn file_write(vm: &mut VM) {
+        let fd = vm.pop_i32();
+        let len = vm.pop_i32() as usize;
+        let ptr = vm.pop_i32() as usize;
+        let mut file = unsafe { File::from_raw_fd(fd) };
+        let mem = vm.memory_ref();
+        let result = file.write(&mem[ptr..ptr + len]);
+
+        std::mem::forget(file);
+
+        match result {
+            Ok(u) => {
+                vm.push_i32(u as i32);
+                vm.push_i32(0);
+            }
+            Err(err) => {
+                vm.push_i32(0);
+                vm.push_i32(err.kind() as i32 + 1); // signal error
+            }
         }
     }
 }

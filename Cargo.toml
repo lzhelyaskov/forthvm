@@ -5,3 +5,6 @@ version = "0.1.0"
 
 [dependencies]
 toyvm = {path = "../toyvm"}
+
+[features]
+fileio = []

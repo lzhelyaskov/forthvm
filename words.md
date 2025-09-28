@@ -135,3 +135,18 @@ not all words are implemented yet!
 * **immediate** *( -- )* toggles F_IMMED flag for the last added word
 * **hidden** *( addr -- )* takes word address 'a' and toggles F_HIDDEN flag of this word
 * **hide** xxx *( -- )* toggles F_HIDDEN flag of xxx word
+
+
+### file io
+* **r/o** *( -- a )*
+* **w/o** *( -- a )*
+* **r/w** *( -- a )*
+
+* **include** xxx *( -- )*
+* **included** *( addr len -- )*
+
+* **file-open** *( addr len opt -- fd f )*
+* **file-create** *( addr len opt -- fd f )*
+* **file-close** *( fd -- )*
+* **file-read** *( addr len fd -- n f )*
+* **file-write** *( addr len fd -- n f )*
