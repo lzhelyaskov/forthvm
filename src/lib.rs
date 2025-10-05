@@ -37,7 +37,7 @@ pub mod mmap {
     pub const LATEST: usize = 40;
     /// interpreter counter. points to next word to execute
     pub const IC: usize = 44;
-    /// help var
+    /// points to cfa of currently executed  word
     pub const A0: usize = 48;
     /// are we compiling (1) or executing (0)
     pub const STATE: usize = 52;
@@ -47,17 +47,27 @@ pub mod mmap {
     pub const BASE: usize = 60;
 
     pub const START_ADR: usize = 64;
-
     pub const COLD_START: usize = 68;
 
     pub const INPUT_BUFFER: usize = 72;
-    pub const INPUT_BUFFER_IDX: usize = 76;
+    //  pub const INPUT_BUFFER_IDX: usize = 76;
+
+    /// >IN
+    pub const INPUT_BUFFER_IN: usize = 76;
+
+    /// identifies input source
+    /// -1 -> string
+    /// 0 -> "user input device"
+    /// fd -> file
+    pub const SOURCE_ID: usize = 80;
     /// docol code location
-    pub const DOCOL: usize = 80;
+    pub const DOCOL: usize = 84;
     /// start of forth dictionary
     pub const DICT: usize = DOCOL + 64;
 }
-pub const MAX_WORD_LEN: usize = 13;
+
+pub const INPUT_BUFFER_MAX_LEN: usize = 128;
+pub const MAX_WORD_LEN: usize = 15;
 
 pub const LEN_MASK: u8 = 0x1f;
 pub const HIDDEN: u8 = 0x20;

@@ -2,7 +2,7 @@ use toyvm::{VM, opcode};
 
 use crate::{
     ForthVM, HIDDEN, IMMEDIATE, LEN_MASK, MAX_WORD_LEN, align,
-    forthvm::{DIV_MOD, NEXT, OVER, ROT, fill_input_buffer, read_next_char},
+    forthvm::{DIV_MOD, NEXT, OVER, ROT, fill_input_buffer, read_next_char_in},
     input_stream::{in_stream_from_stdin, in_stream_is_terminal, in_stream_read_line},
     mmap,
 };
@@ -23,6 +23,9 @@ impl ForthVM {
         let ic = mmap::IC.to_ne_bytes();
         let a0 = mmap::A0.to_ne_bytes();
         let not_3 = (!3_i32).to_ne_bytes();
+        let ib = mmap::INPUT_BUFFER.to_ne_bytes();
+        let ibin = mmap::INPUT_BUFFER_IN.to_ne_bytes();
+        let sid = mmap::SOURCE_ID.to_ne_bytes();
 
         self.builtin(
             "state",
@@ -51,6 +54,22 @@ impl ForthVM {
                 NEXT,
             ],
         );
+
+        self.builtin(
+            "in-buf",
+            &[opcode::I32_CONST, ib[0], ib[1], ib[2], ib[3], NEXT],
+        );
+
+        self.builtin(
+            ">in",
+            &[opcode::I32_CONST, ibin[0], ibin[1], ibin[2], ibin[3], NEXT],
+        );
+
+        self.builtin(
+            "source-id",
+            &[opcode::I32_CONST, sid[0], sid[1], sid[2], sid[3], NEXT],
+        );
+
         self.builtin(
             "dsp",
             &[opcode::I32_CONST, dsp[0], dsp[1], dsp[2], dsp[3], NEXT],
@@ -348,6 +367,28 @@ impl ForthVM {
                 NEXT,
             ],
         );
+
+        // TODO: more return stack tests
+        self.builtin(
+            "r@",
+            &[
+                opcode::I32_CONST,
+                rsp[0],
+                rsp[1],
+                rsp[2],
+                rsp[3],
+                opcode::I32_LOAD,
+                opcode::I32_CONST,
+                4,
+                0,
+                0,
+                0,
+                opcode::ADD,
+                opcode::I32_LOAD,
+                NEXT,
+            ],
+        );
+
         self.builtin(
             "rdrop",
             &[
@@ -895,7 +936,7 @@ fn key(vm: &mut VM) {
 }
 
 fn _key(vm: &mut VM) -> char {
-    if let Some(c) = read_next_char(vm) {
+    if let Some(c) = read_next_char_in(vm) {
         c as char
     } else {
         let mut line = String::new();
@@ -912,7 +953,7 @@ fn _key(vm: &mut VM) -> char {
         }
 
         fill_input_buffer(vm, &line);
-        read_next_char(vm).unwrap() as char
+        read_next_char_in(vm).unwrap() as char
     }
 }
 
@@ -977,7 +1018,7 @@ fn skip_white_space(vm: &mut VM) -> char {
     }
 }
 
-fn make_string(vm: &VM, len: i32, ptr: i32) -> String {
+pub(crate) fn make_string(vm: &VM, len: i32, ptr: i32) -> String {
     let mut s = String::new();
 
     for i in 0..len {
@@ -992,7 +1033,7 @@ fn make_string(vm: &VM, len: i32, ptr: i32) -> String {
 mod fileio {
     use std::{
         fs::{File, OpenOptions},
-        io::{Read, Write},
+        io::{Read, Seek, Write},
         os::fd::{FromRawFd, IntoRawFd},
     };
 
@@ -1088,6 +1129,18 @@ mod fileio {
             }
         }
     }
+
+    // pub(crate) fn read_line(vm: &mut VM) {
+    //     let fd = vm.pop_i32();
+    //     let len = vm.pop_i32() as usize;
+    //     let ptr = vm.pop_i32() as usize;
+    //     let mut file = unsafe { File::from_raw_fd(fd) };
+    //     // let mem = vm.memory_ref_mut();
+    //     let result = file.stream_position(&mut mem[ptr..ptr + len]);
+
+    //     std::mem::forget(file);
+
+    // }
 
     pub(crate) fn file_write(vm: &mut VM) {
         let fd = vm.pop_i32();

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::align;
+use crate::init_dictionary::make_string;
 use crate::{COMPILING, INTERPRETING, LEN_MASK, MAX_WORD_LEN, docol, mmap};
 use toyvm::VM;
 use toyvm::opcode;
@@ -88,6 +89,7 @@ impl ForthVM {
         vm.write_i32(cstack_top as i32, mmap::LTOP);
         vm.write_i32(cstack_top as i32, mmap::LBASE);
 
+        vm.write_i32(0, mmap::SOURCE_ID);
         vm.write_i32(10, mmap::BASE);
         // vm.write_i32(0, mmap::IC);
         // vm.write_i32(0, mmap::A0);
@@ -96,7 +98,8 @@ impl ForthVM {
 
         vm.write_i32(rstack_top as i32 + 4, mmap::IN_STREAM);
         vm.write_i32(lstack_top as i32, mmap::INPUT_BUFFER);
-        vm.write_i32(lstack_top as i32, mmap::INPUT_BUFFER_IDX);
+        //  vm.write_i32(lstack_top as i32, mmap::INPUT_BUFFER_IDX);
+        vm.write_i32(0, mmap::INPUT_BUFFER_IN);
 
         vm.write_u8(NEXT, mmap::COLD_START);
 
@@ -183,8 +186,12 @@ impl ForthVM {
         fill_input_buffer(&mut self.vm, s);
     }
 
+    // pub fn read_next_char(&mut self) -> Option<u8> {
+    //     read_next_char(&mut self.vm)
+    // }
+
     pub fn read_next_char(&mut self) -> Option<u8> {
-        read_next_char(&mut self.vm)
+        read_next_char_in(&mut self.vm)
     }
 
     pub fn write_str(&mut self, idx: usize, s: &str) {
@@ -522,32 +529,45 @@ fn write_str(vm: &mut VM, idx: usize, s: &str) {
 
 fn print_input_buffer(vm: &VM) {
     let input_buffer = vm.read_i32(mmap::INPUT_BUFFER);
-    let input_buffer_idx = vm.read_i32(mmap::INPUT_BUFFER_IDX);
+    let input_buffer_idx = vm.read_i32(mmap::INPUT_BUFFER_IN);
 
-    let len = vm.read_u8(input_buffer as usize);
-    let mut s = String::new();
+    let len = vm.read_u8(input_buffer as usize) as i32;
 
-    for i in 0..len {
-        let c = vm.read_u8(input_buffer as usize + 1 + i as usize);
-        s.push(c as char);
-    }
+    let s = make_string(vm, len, input_buffer + 1);
+
+    let len2 = len - input_buffer_idx;
+    let s2 = make_string(vm, len2, input_buffer + 1 + input_buffer_idx);
 
     println!(
-        "len: {len} input_buffer: {input_buffer} input_buffer_idx: {input_buffer_idx} s: \'{s}\'"
+        "len: {len} input_buffer: {input_buffer} input_buffer_idx: {input_buffer_idx} s: \'{s}\' parse area \'{s2}\'"
     );
 }
 
-pub(crate) fn read_next_char(vm: &mut VM) -> Option<u8> {
+// pub(crate) fn read_next_char(vm: &mut VM) -> Option<u8> {
+//     let input_buffer = vm.read_i32(mmap::INPUT_BUFFER);
+//     let input_buffer_idx = vm.read_i32(mmap::INPUT_BUFFER_IDX);
+//     let len = vm.read_u8(input_buffer as usize);
+
+//     if len == 0 || input_buffer_idx - input_buffer > len as i32 {
+//         return None;
+//     }
+
+//     let c = vm.read_u8(input_buffer_idx as usize);
+//     vm.write_i32(input_buffer_idx + 1, mmap::INPUT_BUFFER_IDX);
+//     Some(c)
+// }
+
+pub(crate) fn read_next_char_in(vm: &mut VM) -> Option<u8> {
     let input_buffer = vm.read_i32(mmap::INPUT_BUFFER);
-    let input_buffer_idx = vm.read_i32(mmap::INPUT_BUFFER_IDX);
+    let input_buffer_in = vm.read_i32(mmap::INPUT_BUFFER_IN);
     let len = vm.read_u8(input_buffer as usize);
 
-    if len == 0 || input_buffer_idx - input_buffer > len as i32 {
+    if len == 0 || input_buffer_in >= len as i32 {
         return None;
     }
 
-    let c = vm.read_u8(input_buffer_idx as usize);
-    vm.write_i32(input_buffer_idx + 1, mmap::INPUT_BUFFER_IDX);
+    let c = vm.read_u8((input_buffer + input_buffer_in + 1) as usize);
+    vm.write_i32(input_buffer_in + 1, mmap::INPUT_BUFFER_IN);
     Some(c)
 }
 
@@ -558,5 +578,5 @@ pub(crate) fn fill_input_buffer(vm: &mut VM, s: &str) {
     vm.write_u8(len as u8, input_buf as usize);
     vm.write(input_buf as usize + 1, s.as_bytes());
 
-    vm.write_i32(input_buf + 1, mmap::INPUT_BUFFER_IDX);
+    vm.write_i32(0, mmap::INPUT_BUFFER_IN);
 }
